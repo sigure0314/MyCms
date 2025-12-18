@@ -9,9 +9,9 @@ using MyCMS.API.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. DB Connection
+// 使用 UseNpgsql 來連線到 Supabase
 builder.Services.AddDbContext<AppDbContext>(opt => 
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 // 2. Services DI
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddControllers();
