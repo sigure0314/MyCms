@@ -6,5 +6,5 @@ public class User {
     public string PasswordHash { get; set; } = string.Empty; // 存 Hash，不存明文
     public string Email { get; set; } = string.Empty;
     public int RoleId { get; set; }
-    public Role Role { get; set; } = new();
+    public Role Role { get; set; } = null!;
 }
