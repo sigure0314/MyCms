@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import UserList from './pages/users/UserList';
 import Permissions from './pages/users/Permissions';
+import YoutubeComments from './pages/marketing/YoutubeComments';
 
 const App = () => (
   <BrowserRouter>
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/users" element={<UserList />} />
           <Route path="/permissions" element={<Permissions />} />
+          <Route path="/marketing/youtube-comments" element={<YoutubeComments />} />
         </Route>
       </Route>
 
