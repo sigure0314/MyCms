@@ -6,7 +6,9 @@ import {
   DashboardOutlined, 
   UserOutlined, 
   TeamOutlined, 
-  SafetyCertificateOutlined 
+  SafetyCertificateOutlined,
+  CustomerServiceOutlined,
+  YoutubeOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 
@@ -43,6 +45,18 @@ const MainLayout: React.FC = () => {
         },
       ],
     },
+    {
+      key: 'sub-marketing',
+      icon: <CustomerServiceOutlined />,
+      label: '粉絲團行銷管理',
+      children: [
+        {
+          key: '/marketing/youtube-comments',
+          icon: <YoutubeOutlined />,
+          label: 'YouTube 留言管理',
+        },
+      ],
+    },
   ];
 
   // 處理點擊事件
@@ -62,7 +76,7 @@ const MainLayout: React.FC = () => {
           // 讓目前的網址自動對應到選單的高亮狀態
           selectedKeys={[location.pathname]}
           // 預設展開「會員管理」資料夾 (選填)
-          defaultOpenKeys={['sub-user']}
+          defaultOpenKeys={['sub-user', 'sub-marketing']}
           items={menuItems}
           onClick={handleMenuClick}
         />
