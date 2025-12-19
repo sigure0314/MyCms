@@ -1,0 +1,9 @@
+# .NET build artifacts
+**/bin/
+**/obj/
+.vs/
+
+# Node (optional, if you want global)
+**/node_modules/
+**/dist/
+**/dist-ssr/
