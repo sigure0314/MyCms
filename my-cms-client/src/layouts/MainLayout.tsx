@@ -1,27 +1,86 @@
-import { Layout, Menu, Button } from 'antd';
-import { Outlet, useNavigate } from 'react-router-dom';
-import { LogoutOutlined, DashboardOutlined } from '@ant-design/icons';
+import React from 'react';
+import { Layout, Menu, Button, theme } from 'antd';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { 
+  LogoutOutlined, 
+  DashboardOutlined, 
+  UserOutlined, 
+  TeamOutlined, 
+  SafetyCertificateOutlined 
+} from '@ant-design/icons';
 import { authService } from '../services/authService';
 
 const { Header, Sider, Content } = Layout;
 
-const MainLayout = () => {
+const MainLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const {
+    token: { colorBgContainer, borderRadiusLG },
+  } = theme.useToken();
+
+  // 定義選單結構 (支援巢狀)
+  const menuItems = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: '儀表板',
+    },
+    {
+      key: 'sub-user', // 父選單的 key (不會跳轉)
+      icon: <UserOutlined />,
+      label: '會員管理',
+      children: [ //這就是巢狀的關鍵
+        {
+          key: '/users', // 子選單 key 對應路由路徑
+          icon: <TeamOutlined />,
+          label: '會員列表',
+        },
+        {
+          key: '/permissions',
+          icon: <SafetyCertificateOutlined />,
+          label: '權限控管',
+        },
+      ],
+    },
+  ];
+
+  // 處理點擊事件
+  const handleMenuClick = (e: { key: string }) => {
+    navigate(e.key);
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider theme="dark">
-        <div style={{ color:'white', padding: 20, textAlign:'center', fontWeight:'bold' }}>CMS</div>
-        <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']} items={[
-          { key: '1', icon: <DashboardOutlined />, label: 'Dashboard', onClick: () => navigate('/dashboard') }
-        ]} />
+      <Sider breakpoint="lg" collapsedWidth="0" theme="dark">
+        <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', textAlign: 'center', color: '#fff', lineHeight: '32px', fontWeight: 'bold' }}>
+          MyCMS
+        </div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          // 讓目前的網址自動對應到選單的高亮狀態
+          selectedKeys={[location.pathname]}
+          // 預設展開「會員管理」資料夾 (選填)
+          defaultOpenKeys={['sub-user']}
+          items={menuItems}
+          onClick={handleMenuClick}
+        />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', padding: '0 20px', display:'flex', justifyContent:'flex-end' }}>
-          <Button icon={<LogoutOutlined />} onClick={authService.logout}>Logout</Button>
+        <Header style={{ padding: '0 20px', background: colorBgContainer, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Button icon={<LogoutOutlined />} onClick={authService.logout}>
+            登出
+          </Button>
         </Header>
-        <Content style={{ margin: '16px', padding: 24, background: '#fff' }}><Outlet /></Content>
+        <Content style={{ margin: '24px 16px 0' }}>
+          <div style={{ padding: 24, minHeight: 360, background: colorBgContainer, borderRadius: borderRadiusLG }}>
+            <Outlet />
+          </div>
+        </Content>
       </Layout>
     </Layout>
   );
 };
+
 export default MainLayout;

@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyCMS.API", "MyCMS.API\MyCMS.API.csproj", "{3A0DE917-227E-AFCB-402F-96BBD5B3D01A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3A0DE917-227E-AFCB-402F-96BBD5B3D01A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A0DE917-227E-AFCB-402F-96BBD5B3D01A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A0DE917-227E-AFCB-402F-96BBD5B3D01A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A0DE917-227E-AFCB-402F-96BBD5B3D01A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EBFB93B3-C5C8-4332-ACCA-DBECBB34A01A}
+	EndGlobalSection
+EndGlobal

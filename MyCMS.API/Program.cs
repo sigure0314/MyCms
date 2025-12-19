@@ -38,14 +38,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 // 5. CORS (Allow Frontend)
-builder.Services.AddCors(opt => opt.AddPolicy("AllowReact", policy => 
-    policy.WithOrigins("http://localhost:5173").AllowAnyMethod().AllowAnyHeader()));
+//builder.Services.AddCors(opt => opt.AddPolicy("AllowReact", policy => 
+  //  policy.WithOrigins("http://localhost:5173").AllowAnyMethod().AllowAnyHeader()));
+builder.Services.AddCors(opt => opt.AddPolicy("AllowAll", policy => 
+    policy.AllowAnyOrigin()   // 允許任何網址連線 (包含 Codespace 前端網址)
+          .AllowAnyMethod()   // 允許 GET, POST, PUT...
+          .AllowAnyHeader()));
+
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
-app.UseCors("AllowReact");
+//app.UseCors("AllowReact");
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
