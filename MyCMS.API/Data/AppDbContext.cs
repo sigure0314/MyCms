@@ -7,6 +7,10 @@ public class AppDbContext : DbContext {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
     public DbSet<User> Users { get; set; }
     public DbSet<Role> Roles { get; set; }
+    
+    public DbSet<Book> Books { get; set; }
+    // ✨ 新增這行
+    public DbSet<BookPage> BookPages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         // 預設建立兩個角色
