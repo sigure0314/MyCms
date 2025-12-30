@@ -17,7 +17,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { UploadOutlined } from '@ant-design/icons';
-import api, { InstagramPost, InstagramPostStatus } from '../../services/api';
+import api from '../../services/api';
+import type { InstagramPost, InstagramPostStatus } from '../../services/api';
 
 const { TextArea } = Input;
 
