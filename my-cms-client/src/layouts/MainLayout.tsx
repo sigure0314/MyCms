@@ -6,7 +6,13 @@ import {
   DashboardOutlined, 
   UserOutlined, 
   TeamOutlined, 
-  SafetyCertificateOutlined 
+  SafetyCertificateOutlined,
+  CustomerServiceOutlined,
+  ReadOutlined,       // 用於圖書系統主選單
+  BookOutlined,       // 用於管理
+  PlayCircleOutlined, // 用於播放
+  RobotOutlined,      // 用於 AI 生成
+  YoutubeOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 
@@ -43,6 +49,40 @@ const MainLayout: React.FC = () => {
         },
       ],
     },
+    {
+      key: 'sub-marketing',
+      icon: <CustomerServiceOutlined />,
+      label: '粉絲團行銷管理',
+      children: [
+        {
+          key: '/marketing/youtube-comments',
+          icon: <YoutubeOutlined />,
+          label: 'YouTube 留言管理',
+        },
+      ],
+    },
+    {
+      key: 'sub-library',
+      icon: <ReadOutlined />,
+      label: 'AI 圖書系統',
+      children: [
+        { 
+          key: '/library/generate', 
+          icon: <RobotOutlined />, 
+          label: '童書文案生成' 
+        },
+        { 
+          key: '/library/books', // 這就是我們剛剛做好的頁面
+          icon: <BookOutlined />, 
+          label: 'AI 童書管理' 
+        },
+        { 
+          key: '/library/player', 
+          icon: <PlayCircleOutlined />, 
+          label: '童書播放' 
+        },
+      ],
+    }
   ];
 
   // 處理點擊事件
@@ -62,7 +102,7 @@ const MainLayout: React.FC = () => {
           // 讓目前的網址自動對應到選單的高亮狀態
           selectedKeys={[location.pathname]}
           // 預設展開「會員管理」資料夾 (選填)
-          defaultOpenKeys={['sub-user']}
+          defaultOpenKeys={['sub-user', 'sub-marketing']}
           items={menuItems}
           onClick={handleMenuClick}
         />
