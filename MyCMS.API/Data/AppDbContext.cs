@@ -11,6 +11,7 @@ public class AppDbContext : DbContext {
     public DbSet<Book> Books { get; set; }
     // ✨ 新增這行
     public DbSet<BookPage> BookPages { get; set; }
+    public DbSet<InstagramPost> InstagramPosts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         // 預設建立兩個角色
