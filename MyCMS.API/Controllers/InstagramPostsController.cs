@@ -14,17 +14,22 @@ namespace MyCMS.API.Controllers;
 public class InstagramPostsController : ControllerBase
 {
     private readonly AppDbContext _context;
-    private readonly IWebHostEnvironment _environment;
     private readonly InstagramGraphApiService _instagramGraphApiService;
+    private readonly Supabase.Client _supabase;
+    private readonly string _supabaseUrl;
+    private readonly string _bucketName;
 
     public InstagramPostsController(
         AppDbContext context,
-        IWebHostEnvironment environment,
-        InstagramGraphApiService instagramGraphApiService)
+        InstagramGraphApiService instagramGraphApiService,
+        Supabase.Client supabase,
+        IConfiguration config)
     {
         _context = context;
-        _environment = environment;
         _instagramGraphApiService = instagramGraphApiService;
+        _supabase = supabase;
+        _supabaseUrl = config["Supabase:Url"] ?? string.Empty;
+        _bucketName = config["Supabase:InstagramBucketName"] ?? "instagram";
     }
 
     [HttpGet]
@@ -63,17 +68,16 @@ public class InstagramPostsController : ControllerBase
             return BadRequest("請上傳貼文圖片。");
         }
 
-        var uploadFolder = Path.Combine(_environment.WebRootPath ?? "wwwroot", "uploads", "instagram");
-        Directory.CreateDirectory(uploadFolder);
-
         var extension = Path.GetExtension(request.Image.FileName);
-        var fileName = $"{Guid.NewGuid():N}{extension}";
-        var filePath = Path.Combine(uploadFolder, fileName);
+        var fileName = $"instagram/{Guid.NewGuid():N}{extension}";
 
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await request.Image.CopyToAsync(stream);
-        }
+        await using var memoryStream = new MemoryStream();
+        await request.Image.CopyToAsync(memoryStream);
+        var imageBytes = memoryStream.ToArray();
+
+        await _supabase.Storage
+            .From(_bucketName)
+            .Upload(imageBytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
 
         var requestedStatus = request.Status ?? InstagramPostStatus.PendingReview;
         if (requestedStatus == InstagramPostStatus.Published)
@@ -89,7 +93,7 @@ public class InstagramPostsController : ControllerBase
         var post = new InstagramPost
         {
             Caption = request.Caption,
-            ImagePath = Path.Combine("uploads", "instagram", fileName).Replace("\\", "/"),
+            ImagePath = fileName,
             Status = requestedStatus,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -253,6 +257,6 @@ public class InstagramPostsController : ControllerBase
             return imagePath;
         }
 
-        return $"{Request.Scheme}://{Request.Host}/{imagePath.TrimStart('/')}";
+        return $"{_supabaseUrl}/storage/v1/object/public/{_bucketName}/{imagePath.TrimStart('/')}";
     }
 }
