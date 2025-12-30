@@ -26,6 +26,23 @@ export interface StoryDraft {
   pages: StoryPageDto[];
 }
 
+export type InstagramPostStatus = 'PendingReview' | 'Published';
+
+export interface InstagramPost {
+  id: number;
+  caption: string;
+  status: InstagramPostStatus;
+  imageUrl: string;
+  createdAt: string;
+  updatedAt?: string;
+  publishedAt?: string;
+}
+
+export interface UpdateInstagramPostRequest {
+  caption?: string;
+  status?: InstagramPostStatus;
+}
+
 // 2. 設定 Base URL
 // 建議：正式開發時將 URL 放到 .env 檔案 (例如 import.meta.env.VITE_API_URL)
 // 目前先維持你原本的設定
@@ -88,6 +105,17 @@ const api = {
   // 2. 正式生成 (圖片+存檔)
   finalizeStory: (data: StoryDraft) => {
     return axiosInstance.post('/story/finalize', data, { timeout: 180000 }); // 給 3 分鐘
+  },
+  getInstagramPosts: () => {
+    return axiosInstance.get<InstagramPost[]>('/instagramposts');
+  },
+  createInstagramPost: (data: FormData) => {
+    return axiosInstance.post<InstagramPost>('/instagramposts', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  updateInstagramPost: (id: number, data: UpdateInstagramPostRequest) => {
+    return axiosInstance.put<InstagramPost>(`/instagramposts/${id}`, data);
   }
 };
 

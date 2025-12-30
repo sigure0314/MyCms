@@ -13,6 +13,7 @@ import {
   PlayCircleOutlined, // 用於播放
   RobotOutlined,      // 用於 AI 生成
   YoutubeOutlined,
+  InstagramOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 
@@ -58,6 +59,11 @@ const MainLayout: React.FC = () => {
           key: '/marketing/youtube-comments',
           icon: <YoutubeOutlined />,
           label: 'YouTube 留言管理',
+        },
+        {
+          key: '/marketing/instagram-posts',
+          icon: <InstagramOutlined />,
+          label: 'IG 貼文管理',
         },
       ],
     },

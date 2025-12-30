@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import UserList from './pages/users/UserList';
 import Permissions from './pages/users/Permissions';
 import YoutubeComments from './pages/marketing/YoutubeComments';
+import InstagramPosts from './pages/marketing/InstagramPosts';
 
 // ✨ 匯入新頁面
 import BookManagement from './pages/library/BookManagement';
@@ -34,6 +35,7 @@ const App = () => (
           
           {/* 行銷區 */}
           <Route path="/marketing/youtube" element={<YoutubeComments />} />
+          <Route path="/marketing/instagram-posts" element={<InstagramPosts />} />
           
           {/* ✨ AI 圖書系統區 */}
           <Route path="/library/generate" element={<StoryGenerator />} />
