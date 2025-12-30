@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MyCMS.API.Data;
 using MyCMS.API.DTOs;
 using MyCMS.API.Models;
+using MyCMS.API.Services;
 
 namespace MyCMS.API.Controllers;
 
@@ -14,11 +15,16 @@ public class InstagramPostsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IWebHostEnvironment _environment;
+    private readonly InstagramGraphApiService _instagramGraphApiService;
 
-    public InstagramPostsController(AppDbContext context, IWebHostEnvironment environment)
+    public InstagramPostsController(
+        AppDbContext context,
+        IWebHostEnvironment environment,
+        InstagramGraphApiService instagramGraphApiService)
     {
         _context = context;
         _environment = environment;
+        _instagramGraphApiService = instagramGraphApiService;
     }
 
     [HttpGet]
@@ -69,19 +75,32 @@ public class InstagramPostsController : ControllerBase
             await request.Image.CopyToAsync(stream);
         }
 
-        var status = request.Status ?? InstagramPostStatus.PendingReview;
         var post = new InstagramPost
         {
             Caption = request.Caption,
             ImagePath = Path.Combine("uploads", "instagram", fileName).Replace("\\", "/"),
-            Status = status,
+            Status = InstagramPostStatus.PendingReview,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            PublishedAt = status == InstagramPostStatus.Published ? DateTime.UtcNow : null
+            UpdatedAt = DateTime.UtcNow
         };
 
         _context.InstagramPosts.Add(post);
         await _context.SaveChangesAsync();
+
+        if (request.Status == InstagramPostStatus.Published)
+        {
+            var imageUrl = BuildImageUrl(post.ImagePath);
+            var publishResult = await _instagramGraphApiService.PublishAsync(imageUrl, post.Caption, HttpContext.RequestAborted);
+            if (!publishResult.Success)
+            {
+                return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
+            }
+
+            post.Status = InstagramPostStatus.Published;
+            post.PublishedAt = DateTime.UtcNow;
+            post.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
 
         return CreatedAtAction(nameof(GetPost), new { id = post.Id }, MapToDto(post));
     }
@@ -105,6 +124,14 @@ public class InstagramPostsController : ControllerBase
             post.Status = request.Status.Value;
             if (post.Status == InstagramPostStatus.Published)
             {
+                var imageUrl = BuildImageUrl(post.ImagePath);
+                var publishResult = await _instagramGraphApiService.PublishAsync(imageUrl, post.Caption, HttpContext.RequestAborted);
+                if (!publishResult.Success)
+                {
+                    post.Status = InstagramPostStatus.PendingReview;
+                    return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
+                }
+
                 post.PublishedAt ??= DateTime.UtcNow;
             }
         }
