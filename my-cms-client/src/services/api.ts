@@ -26,7 +26,7 @@ export interface StoryDraft {
   pages: StoryPageDto[];
 }
 
-export type InstagramPostStatus = 'PendingReview' | 'Published';
+export type InstagramPostStatus = 'PendingReview' | 'Approved' | 'Rejected' | 'Published';
 
 export interface InstagramPost {
   id: number;
@@ -35,12 +35,14 @@ export interface InstagramPost {
   imageUrl: string;
   createdAt: string;
   updatedAt?: string;
+  scheduledAt?: string;
   publishedAt?: string;
 }
 
 export interface UpdateInstagramPostRequest {
   caption?: string;
   status?: InstagramPostStatus;
+  scheduledAt?: string;
 }
 
 // 2. 設定 Base URL

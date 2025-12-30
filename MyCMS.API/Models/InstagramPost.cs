@@ -6,7 +6,9 @@ namespace MyCMS.API.Models;
 public enum InstagramPostStatus
 {
     PendingReview = 0,
-    Published = 1
+    Approved = 1,
+    Rejected = 2,
+    Published = 3
 }
 
 public class InstagramPost
@@ -17,5 +19,6 @@ public class InstagramPost
     public InstagramPostStatus Status { get; set; } = InstagramPostStatus.PendingReview;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public DateTime? ScheduledAt { get; set; }
     public DateTime? PublishedAt { get; set; }
 }

@@ -75,31 +75,41 @@ public class InstagramPostsController : ControllerBase
             await request.Image.CopyToAsync(stream);
         }
 
+        var requestedStatus = request.Status ?? InstagramPostStatus.PendingReview;
+        if (requestedStatus == InstagramPostStatus.Published)
+        {
+            requestedStatus = InstagramPostStatus.Approved;
+        }
+        var scheduledAt = request.ScheduledAt?.ToUniversalTime();
+        if (requestedStatus != InstagramPostStatus.Approved && requestedStatus != InstagramPostStatus.Published)
+        {
+            scheduledAt = null;
+        }
+
         var post = new InstagramPost
         {
             Caption = request.Caption,
             ImagePath = Path.Combine("uploads", "instagram", fileName).Replace("\\", "/"),
-            Status = InstagramPostStatus.PendingReview,
+            Status = requestedStatus,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            ScheduledAt = scheduledAt
         };
 
         _context.InstagramPosts.Add(post);
         await _context.SaveChangesAsync();
 
-        if (request.Status == InstagramPostStatus.Published)
+        if (post.Status == InstagramPostStatus.Approved && IsReadyToPublish(post.ScheduledAt))
         {
-            var imageUrl = BuildImageUrl(post.ImagePath);
-            var publishResult = await _instagramGraphApiService.PublishAsync(imageUrl, post.Caption, HttpContext.RequestAborted);
+            var publishResult = await TryPublishAsync(post);
             if (!publishResult.Success)
             {
+                post.Status = InstagramPostStatus.PendingReview;
+                post.ScheduledAt = null;
+                post.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
                 return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
             }
-
-            post.Status = InstagramPostStatus.Published;
-            post.PublishedAt = DateTime.UtcNow;
-            post.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
         }
 
         return CreatedAtAction(nameof(GetPost), new { id = post.Id }, MapToDto(post));
@@ -114,6 +124,8 @@ public class InstagramPostsController : ControllerBase
             return NotFound();
         }
 
+        var previousStatus = post.Status;
+
         if (!string.IsNullOrWhiteSpace(request.Caption))
         {
             post.Caption = request.Caption;
@@ -121,18 +133,68 @@ public class InstagramPostsController : ControllerBase
 
         if (request.Status.HasValue)
         {
-            post.Status = request.Status.Value;
-            if (post.Status == InstagramPostStatus.Published)
+            switch (request.Status.Value)
             {
-                var imageUrl = BuildImageUrl(post.ImagePath);
-                var publishResult = await _instagramGraphApiService.PublishAsync(imageUrl, post.Caption, HttpContext.RequestAborted);
+                case InstagramPostStatus.Rejected:
+                    if (previousStatus == InstagramPostStatus.Published)
+                    {
+                        return BadRequest("已發佈的貼文無法改為審核拒絕。");
+                    }
+
+                    post.Status = InstagramPostStatus.Rejected;
+                    post.ScheduledAt = null;
+                    break;
+                case InstagramPostStatus.Approved:
+                    post.Status = InstagramPostStatus.Approved;
+                    post.ScheduledAt = request.ScheduledAt?.ToUniversalTime();
+                    if (IsReadyToPublish(post.ScheduledAt))
+                    {
+                        var publishResult = await TryPublishAsync(post);
+                        if (!publishResult.Success)
+                        {
+                            post.Status = InstagramPostStatus.PendingReview;
+                            post.ScheduledAt = null;
+                            return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
+                        }
+                    }
+                    break;
+                case InstagramPostStatus.Published:
+                    if (previousStatus == InstagramPostStatus.Published)
+                    {
+                        break;
+                    }
+
+                    if (previousStatus != InstagramPostStatus.Approved)
+                    {
+                        return BadRequest("請先審核通過後再發佈。");
+                    }
+
+                    var manualPublishResult = await TryPublishAsync(post);
+                    if (!manualPublishResult.Success)
+                    {
+                        post.Status = InstagramPostStatus.PendingReview;
+                        post.ScheduledAt = null;
+                        return StatusCode(StatusCodes.Status502BadGateway, manualPublishResult.ErrorMessage);
+                    }
+                    break;
+                default:
+                    post.Status = InstagramPostStatus.PendingReview;
+                    post.ScheduledAt = null;
+                    break;
+            }
+        }
+        else if (request.ScheduledAt.HasValue && post.Status == InstagramPostStatus.Approved)
+        {
+            post.ScheduledAt = request.ScheduledAt?.ToUniversalTime();
+            if (IsReadyToPublish(post.ScheduledAt))
+            {
+                var publishResult = await TryPublishAsync(post);
                 if (!publishResult.Success)
                 {
                     post.Status = InstagramPostStatus.PendingReview;
+                    post.ScheduledAt = null;
                     return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
                 }
-
-                post.PublishedAt ??= DateTime.UtcNow;
             }
         }
 
@@ -152,8 +214,31 @@ public class InstagramPostsController : ControllerBase
             ImageUrl = BuildImageUrl(post.ImagePath),
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
+            ScheduledAt = post.ScheduledAt,
             PublishedAt = post.PublishedAt
         };
+    }
+
+    private bool IsReadyToPublish(DateTime? scheduledAt)
+    {
+        return !scheduledAt.HasValue || scheduledAt.Value <= DateTime.UtcNow;
+    }
+
+    private async Task<(bool Success, string? ErrorMessage)> TryPublishAsync(InstagramPost post)
+    {
+        var imageUrl = BuildImageUrl(post.ImagePath);
+        var publishResult = await _instagramGraphApiService.PublishAsync(imageUrl, post.Caption, HttpContext.RequestAborted);
+        if (!publishResult.Success)
+        {
+            return (false, publishResult.ErrorMessage);
+        }
+
+        post.Status = InstagramPostStatus.Published;
+        post.PublishedAt ??= DateTime.UtcNow;
+        post.UpdatedAt = DateTime.UtcNow;
+        post.ScheduledAt = null;
+        await _context.SaveChangesAsync();
+        return (true, null);
     }
 
     private string BuildImageUrl(string? imagePath)
