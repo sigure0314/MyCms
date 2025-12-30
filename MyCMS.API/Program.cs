@@ -58,6 +58,9 @@ builder.Services.AddCors(opt => opt.AddPolicy("AllowAll", policy =>
 
 builder.Services.AddHttpClient<IGeminiClient, GeminiClient>();
 builder.Services.AddHttpClient<IImageGenerator, GoogleImagenGenerator>();
+builder.Services.Configure<InstagramGraphApiOptions>(
+    builder.Configuration.GetSection("InstagramGraphApi"));
+builder.Services.AddHttpClient<InstagramGraphApiService>();
 builder.Services.AddScoped<StoryService>();
 
 var app = builder.Build();
