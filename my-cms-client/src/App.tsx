@@ -9,23 +9,47 @@ import UserList from './pages/users/UserList';
 import Permissions from './pages/users/Permissions';
 import YoutubeComments from './pages/marketing/YoutubeComments';
 
+// ✨ 匯入新頁面
+import BookManagement from './pages/library/BookManagement';
+import StoryGenerator from './pages/library/StoryGenerator';
+
+import PlayerList from './pages/player/PlayerList';
+import PersonalReader from './pages/player/PersonalReader'; // (這個可以參照之前的個人閱讀模式寫法)
+import StoryTeller from './pages/player/StoryTeller';
+
 const App = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/login" element={<Login />} />
       
-      {/* 受保護的區域 */}
       <Route element={<ProtectedRoute />}>
+          <Route path="/player/read/:id" element={<PersonalReader />} />
+          <Route path="/player/story/:id" element={<StoryTeller />} />
         <Route element={<MainLayout />}>
-          {/* 這裡對應 MainLayout 裡的 Outlet */}
           <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* 會員區 */}
           <Route path="/users" element={<UserList />} />
           <Route path="/permissions" element={<Permissions />} />
-          <Route path="/marketing/youtube-comments" element={<YoutubeComments />} />
+          
+          {/* 行銷區 */}
+          <Route path="/marketing/youtube" element={<YoutubeComments />} />
+          
+          {/* ✨ AI 圖書系統區 */}
+          <Route path="/library/generate" element={<StoryGenerator />} />
+          <Route path="/library/books" element={<BookManagement />} />
+          
+          <Route path="/library/player" element={<PlayerList />} />
+
+          {/* 注意：因為 generate 和 player 頁面還沒做，
+             如果點選單會是一片空白。
+             你可以先指到 dashboard 或是一個 "施工中" 的頁面，
+             或是暫時先不設定這兩個 Route。
+          */}
+          
         </Route>
       </Route>
 
-      {/* 預設導向 */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   </BrowserRouter>

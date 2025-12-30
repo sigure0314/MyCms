@@ -8,6 +8,10 @@ import {
   TeamOutlined, 
   SafetyCertificateOutlined,
   CustomerServiceOutlined,
+  ReadOutlined,       // 用於圖書系統主選單
+  BookOutlined,       // 用於管理
+  PlayCircleOutlined, // 用於播放
+  RobotOutlined,      // 用於 AI 生成
   YoutubeOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
@@ -57,6 +61,28 @@ const MainLayout: React.FC = () => {
         },
       ],
     },
+    {
+      key: 'sub-library',
+      icon: <ReadOutlined />,
+      label: 'AI 圖書系統',
+      children: [
+        { 
+          key: '/library/generate', 
+          icon: <RobotOutlined />, 
+          label: '童書文案生成' 
+        },
+        { 
+          key: '/library/books', // 這就是我們剛剛做好的頁面
+          icon: <BookOutlined />, 
+          label: 'AI 童書管理' 
+        },
+        { 
+          key: '/library/player', 
+          icon: <PlayCircleOutlined />, 
+          label: '童書播放' 
+        },
+      ],
+    }
   ];
 
   // 處理點擊事件

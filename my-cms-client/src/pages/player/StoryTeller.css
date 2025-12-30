@@ -1,0 +1,81 @@
+/* =========================================
+   1. 電視/投影模式 (Viewer Mode)
+   ========================================= */
+
+/* 全螢幕容器：黑色背景、內容置中 */
+.tv-container {
+    width: 100vw;
+    height: 100vh;
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* 防止出現捲軸 */
+    position: relative; /* 為了讓絕對定位的頁碼參考 */
+}
+
+/* =========================================
+   2. 圖片動畫核心 (Animation)
+   ========================================= */
+
+/* 圖片基礎設定 */
+.story-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* 保持圖片比例，不變形 */
+    
+    /* 初始狀態 (動畫開始前) */
+    opacity: 0;                /* 透明 */
+    transform: scale(0.95);    /*稍微縮小 (創造一種浮出來的感覺) */
+    
+    /* 過渡效果設定 */
+    /* opacity: 0.8秒漸顯 */
+    /* transform: 0.8秒縮放 */
+    transition: opacity 0.8s ease-in-out, transform 0.8s ease-out;
+    
+    /* 提升效能，告訴瀏覽器這些屬性會變動 */
+    will-change: opacity, transform;
+}
+
+/* 啟動狀態 (當 React 渲染完成後套用此 class) */
+.story-image.active {
+    opacity: 1;              /* 變為不透明 */
+    transform: scale(1);     /* 恢復原始大小 */
+}
+
+/* =========================================
+   3. 介面元素 (UI Elements)
+   ========================================= */
+
+/* 右下角的頁碼 (半透明白字) */
+.tv-page-number {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    
+    color: rgba(255, 255, 255, 0.6); /* 60% 透明度的白色 */
+    font-size: 28px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    
+    /* 加上黑色陰影，確保在白色背景的圖片上也看得到字 */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    
+    pointer-events: none; /* 讓點擊穿透，避免擋住操作 */
+    user-select: none;    /* 防止被選取反白 */
+}
+
+/* 載入中的文字樣式 (若使用純文字顯示 loading) */
+.tv-loading-text {
+    color: #fff;
+    font-size: 20px;
+    letter-spacing: 2px;
+    animation: pulse 1.5s infinite;
+}
+
+/* 簡單的呼吸燈動畫 */
+@keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
