@@ -10,6 +10,10 @@ using MyCMS.API.Hubs ;
 var builder = WebApplication.CreateBuilder(args);
 var supabaseUrl = builder.Configuration["Supabase:Url"];
 var supabaseKey = builder.Configuration["Supabase:Key"];
+if (string.IsNullOrEmpty(supabaseUrl) || string.IsNullOrEmpty(supabaseKey))
+{
+    throw new Exception("Supabase Url 或 Key 未設定！請檢查 appsettings.json");
+}
 builder.Services.AddSignalR();
 // 1. DB Connection
 // 使用 UseNpgsql 來連線到 Supabase
