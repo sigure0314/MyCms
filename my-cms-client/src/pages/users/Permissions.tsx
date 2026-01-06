@@ -12,7 +12,8 @@ import {
   Tag,
   message,
 } from 'antd';
-import api, { Role, UserSummary } from '../../services/api';
+import api from '../../services/api';
+import type { Role, UserSummary } from '../../services/api';
 
 const Permissions: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
