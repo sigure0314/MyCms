@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyCMS.API.Data;
+using MyCMS.API.DTOs;
 
 namespace MyCMS.API.Controllers;
 
@@ -33,5 +34,34 @@ public class UsersController : ControllerBase
             .ToListAsync();
 
         return Ok(users);
+    }
+
+    [HttpPatch("{id:int}/role")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateUserRole(int id, UpdateUserRoleRequest request)
+    {
+        var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        var role = await _context.Roles.FindAsync(request.RoleId);
+        if (role == null)
+        {
+            return BadRequest("Role not found.");
+        }
+
+        user.RoleId = role.Id;
+        await _context.SaveChangesAsync();
+        await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+
+        return Ok(new
+        {
+            user.Id,
+            user.Username,
+            user.Email,
+            Role = user.Role.Name
+        });
     }
 }
