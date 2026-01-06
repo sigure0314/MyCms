@@ -86,4 +86,44 @@ public class RolesController : ControllerBase {
         await _context.SaveChangesAsync();
         return NoContent();
     }
+
+    [HttpGet("{id:int}/permissions")]
+    public async Task<ActionResult<IEnumerable<int>>> GetRolePermissions(int id) {
+        var role = await _context.Roles
+            .Include(r => r.RolePermissions)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (role == null) {
+            return NotFound();
+        }
+
+        var permissionIds = role.RolePermissions.Select(rp => rp.PermissionId).ToList();
+        return Ok(permissionIds);
+    }
+
+    [HttpPut("{id:int}/permissions")]
+    public async Task<IActionResult> UpdateRolePermissions(int id, UpdateRolePermissionsRequest request) {
+        var role = await _context.Roles
+            .Include(r => r.RolePermissions)
+            .FirstOrDefaultAsync(r => r.Id == id);
+        if (role == null) {
+            return NotFound();
+        }
+
+        var validPermissions = await _context.Permissions
+            .Where(p => request.PermissionIds.Contains(p.Id))
+            .Select(p => p.Id)
+            .ToListAsync();
+
+        role.RolePermissions.Clear();
+        foreach (var permissionId in validPermissions) {
+            role.RolePermissions.Add(new RolePermission {
+                RoleId = role.Id,
+                PermissionId = permissionId,
+                IsAllowed = true
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
 }
