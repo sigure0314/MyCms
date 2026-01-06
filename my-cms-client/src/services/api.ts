@@ -58,6 +58,20 @@ export interface UserSummary {
   role: string;
 }
 
+export interface Permission {
+  id: number;
+  parentId?: number | null;
+  code: string;
+  name: string;
+  type: number;
+  routePath?: string | null;
+  apiMethod?: string | null;
+  apiPath?: string | null;
+  icon?: string | null;
+  sortOrder: number;
+  isEnabled: boolean;
+}
+
 // 2. 設定 Base URL
 // 建議：正式開發時將 URL 放到 .env 檔案 (例如 import.meta.env.VITE_API_URL)
 // 目前先維持你原本的設定
@@ -149,6 +163,24 @@ const api = {
   },
   updateUserRole: (id: number, roleId: number) => {
     return axiosInstance.patch<UserSummary>(`/users/${id}/role`, { roleId });
+  },
+  getPermissions: () => {
+    return axiosInstance.get<Permission[]>('/permissions');
+  },
+  createPermission: (data: Omit<Permission, 'id'>) => {
+    return axiosInstance.post<Permission>('/permissions', data);
+  },
+  updatePermission: (id: number, data: Omit<Permission, 'id'>) => {
+    return axiosInstance.put<Permission>(`/permissions/${id}`, data);
+  },
+  deletePermission: (id: number) => {
+    return axiosInstance.delete(`/permissions/${id}`);
+  },
+  getRolePermissions: (roleId: number) => {
+    return axiosInstance.get<number[]>(`/roles/${roleId}/permissions`);
+  },
+  updateRolePermissions: (roleId: number, permissionIds: number[]) => {
+    return axiosInstance.put(`/roles/${roleId}/permissions`, { permissionIds });
   }
 };
 
