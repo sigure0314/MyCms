@@ -45,6 +45,19 @@ export interface UpdateInstagramPostRequest {
   scheduledAt?: string;
 }
 
+export interface Role {
+  id: number;
+  name: string;
+  userCount: number;
+}
+
+export interface UserSummary {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+}
+
 // 2. 設定 Base URL
 // 建議：正式開發時將 URL 放到 .env 檔案 (例如 import.meta.env.VITE_API_URL)
 // 目前先維持你原本的設定
@@ -118,6 +131,24 @@ const api = {
   },
   updateInstagramPost: (id: number, data: UpdateInstagramPostRequest) => {
     return axiosInstance.put<InstagramPost>(`/instagramposts/${id}`, data);
+  },
+  getRoles: () => {
+    return axiosInstance.get<Role[]>('/roles');
+  },
+  createRole: (name: string) => {
+    return axiosInstance.post<Role>('/roles', { name });
+  },
+  updateRole: (id: number, name: string) => {
+    return axiosInstance.put<Role>(`/roles/${id}`, { name });
+  },
+  deleteRole: (id: number) => {
+    return axiosInstance.delete(`/roles/${id}`);
+  },
+  getUsers: () => {
+    return axiosInstance.get<UserSummary[]>('/users');
+  },
+  updateUserRole: (id: number, roleId: number) => {
+    return axiosInstance.patch<UserSummary>(`/users/${id}/role`, { roleId });
   }
 };
 
