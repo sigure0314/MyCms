@@ -96,6 +96,10 @@ const MainLayout: React.FC = () => {
     navigate(e.key);
   };
 
+  const selectedKey = location.pathname.startsWith('/permissions')
+    ? '/permissions'
+    : location.pathname;
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider breakpoint="lg" collapsedWidth="0" theme="dark">
@@ -106,7 +110,7 @@ const MainLayout: React.FC = () => {
           theme="dark"
           mode="inline"
           // 讓目前的網址自動對應到選單的高亮狀態
-          selectedKeys={[location.pathname]}
+          selectedKeys={[selectedKey]}
           // 預設展開「會員管理」資料夾 (選填)
           defaultOpenKeys={['sub-user', 'sub-marketing']}
           items={menuItems}

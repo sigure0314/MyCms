@@ -6,7 +6,11 @@ import ProtectedRoute from './components/ProtectedRoute';
 // 匯入新頁面
 import Dashboard from './pages/Dashboard';
 import UserList from './pages/users/UserList';
-import Permissions from './pages/users/Permissions';
+import PermissionsLayout from './pages/users/permissions/PermissionsLayout';
+import PermissionManagement from './pages/users/permissions/PermissionManagement';
+import RoleManagement from './pages/users/permissions/RoleManagement';
+import RolePermissions from './pages/users/permissions/RolePermissions';
+import UserRoleAssignments from './pages/users/permissions/UserRoleAssignments';
 import YoutubeComments from './pages/marketing/YoutubeComments';
 import InstagramPosts from './pages/marketing/InstagramPosts';
 
@@ -31,7 +35,13 @@ const App = () => (
           
           {/* 會員區 */}
           <Route path="/users" element={<UserList />} />
-          <Route path="/permissions" element={<Permissions />} />
+          <Route path="/permissions" element={<PermissionsLayout />}>
+            <Route index element={<Navigate to="permissions" replace />} />
+            <Route path="permissions" element={<PermissionManagement />} />
+            <Route path="roles" element={<RoleManagement />} />
+            <Route path="role-permissions" element={<RolePermissions />} />
+            <Route path="user-roles" element={<UserRoleAssignments />} />
+          </Route>
           
           {/* 行銷區 */}
           <Route path="/marketing/youtube" element={<YoutubeComments />} />
