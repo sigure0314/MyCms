@@ -20,12 +20,13 @@ public class RolesController : ControllerBase {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<RoleResponse>>> GetRoles() {
         var roles = await _context.Roles
-            .OrderBy(r => r.Id)
-            .Select(r => new RoleResponse(
+            .Select(r => new {
                 r.Id,
                 r.Name,
-                _context.Users.Count(u => u.RoleId == r.Id)
-            ))
+                UserCount = r.Users.Count
+            })
+            .OrderBy(r => r.Id)
+            .Select(r => new RoleResponse(r.Id, r.Name, r.UserCount))
             .ToListAsync();
 
         return Ok(roles);
