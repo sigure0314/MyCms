@@ -15,6 +15,7 @@ import {
   RobotOutlined,      // 用於 AI 生成
   YoutubeOutlined,
   InstagramOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 
@@ -33,6 +34,11 @@ const MainLayout: React.FC = () => {
 
   // 定義選單結構 (支援巢狀)
   const menuItems: MenuProps['items'] = [
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: '個人設定',
+    },
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,

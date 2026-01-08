@@ -109,6 +109,10 @@ export const authService = {
   isAuthenticated: () => !!localStorage.getItem('token'),
   getPermissionRoutes: () => getStoredPermissionRoutes(),
   hasPermission: (path: string) => {
+    if (path === '/settings') {
+      return true;
+    }
+
     const routes = getStoredPermissionRoutes();
     if (routes.length === 0) {
       return true;

@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PermissionRoute from './components/PermissionRoute';
@@ -22,16 +24,23 @@ import StoryGenerator from './pages/library/StoryGenerator';
 import PlayerList from './pages/player/PlayerList';
 import PersonalReader from './pages/player/PersonalReader'; // (這個可以參照之前的個人閱讀模式寫法)
 import StoryTeller from './pages/player/StoryTeller';
+import PersonalSettings from './pages/PersonalSettings';
 
 const App = () => (
   <BrowserRouter>
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       
       <Route element={<ProtectedRoute />}>
           <Route path="/player/read/:id" element={<PersonalReader />} />
           <Route path="/player/story/:id" element={<StoryTeller />} />
         <Route element={<MainLayout />}>
+          <Route
+            path="/settings"
+            element={<PermissionRoute path="/settings" element={<PersonalSettings />} />}
+          />
           <Route
             path="/dashboard"
             element={<PermissionRoute path="/dashboard" element={<Dashboard />} />}
