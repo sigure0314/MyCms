@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Layout, Menu, Button, theme } from 'antd';
+import type { MenuProps } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LogoutOutlined, 
@@ -26,8 +27,12 @@ const MainLayout: React.FC = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
+  useEffect(() => {
+    void authService.ensurePermissionsLoaded();
+  }, []);
+
   // 定義選單結構 (支援巢狀)
-  const menuItems = [
+  const menuItems: MenuProps['items'] = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
@@ -56,7 +61,7 @@ const MainLayout: React.FC = () => {
       label: '粉絲團行銷管理',
       children: [
         {
-          key: '/marketing/youtube-comments',
+          key: '/marketing/youtube',
           icon: <YoutubeOutlined />,
           label: 'YouTube 留言管理',
         },
@@ -91,6 +96,35 @@ const MainLayout: React.FC = () => {
     }
   ];
 
+  const filterMenuItems = (items: MenuProps['items']): MenuProps['items'] =>
+    items
+      ?.map(item => {
+        if (!item) {
+          return null;
+        }
+
+        if ('children' in item && item.children) {
+          const filteredChildren = filterMenuItems(item.children);
+          if (!filteredChildren || filteredChildren.length === 0) {
+            return null;
+          }
+
+          return {
+            ...item,
+            children: filteredChildren,
+          };
+        }
+
+        if (typeof item.key === 'string' && !authService.hasPermission(item.key)) {
+          return null;
+        }
+
+        return item;
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  const visibleMenuItems = filterMenuItems(menuItems);
+
   // 處理點擊事件
   const handleMenuClick = (e: { key: string }) => {
     navigate(e.key);
@@ -113,7 +147,7 @@ const MainLayout: React.FC = () => {
           selectedKeys={[selectedKey]}
           // 預設展開「會員管理」資料夾 (選填)
           defaultOpenKeys={['sub-user', 'sub-marketing']}
-          items={menuItems}
+          items={visibleMenuItems}
           onClick={handleMenuClick}
         />
       </Sider>
