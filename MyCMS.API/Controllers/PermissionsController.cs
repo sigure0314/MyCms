@@ -9,7 +9,7 @@ namespace MyCMS.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class PermissionsController : ControllerBase {
     private readonly AppDbContext _context;
 
@@ -41,6 +41,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<PermissionResponse>> CreatePermission(PermissionUpsertRequest request) {
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name)) {
             return BadRequest("Permission code and name are required.");
@@ -86,6 +87,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<PermissionResponse>> UpdatePermission(int id, PermissionUpsertRequest request) {
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name)) {
             return BadRequest("Permission code and name are required.");
@@ -132,6 +134,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeletePermission(int id) {
         var permission = await _context.Permissions.FindAsync(id);
         if (permission == null) {
