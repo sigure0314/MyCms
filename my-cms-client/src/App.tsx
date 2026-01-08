@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import PermissionRoute from './components/PermissionRoute';
 
 // 匯入新頁面
 import Dashboard from './pages/Dashboard';
@@ -31,27 +32,63 @@ const App = () => (
           <Route path="/player/read/:id" element={<PersonalReader />} />
           <Route path="/player/story/:id" element={<StoryTeller />} />
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/dashboard"
+            element={<PermissionRoute path="/dashboard" element={<Dashboard />} />}
+          />
           
           {/* 會員區 */}
-          <Route path="/users" element={<UserList />} />
-          <Route path="/permissions" element={<PermissionsLayout />}>
+          <Route
+            path="/users"
+            element={<PermissionRoute path="/users" element={<UserList />} />}
+          />
+          <Route
+            path="/permissions"
+            element={<PermissionRoute path="/permissions" element={<PermissionsLayout />} />}
+          >
             <Route index element={<Navigate to="permissions" replace />} />
-            <Route path="permissions" element={<PermissionManagement />} />
-            <Route path="roles" element={<RoleManagement />} />
-            <Route path="role-permissions" element={<RolePermissions />} />
-            <Route path="user-roles" element={<UserRoleAssignments />} />
+            <Route
+              path="permissions"
+              element={<PermissionRoute path="/permissions/permissions" element={<PermissionManagement />} />}
+            />
+            <Route
+              path="roles"
+              element={<PermissionRoute path="/permissions/roles" element={<RoleManagement />} />}
+            />
+            <Route
+              path="role-permissions"
+              element={<PermissionRoute path="/permissions/role-permissions" element={<RolePermissions />} />}
+            />
+            <Route
+              path="user-roles"
+              element={<PermissionRoute path="/permissions/user-roles" element={<UserRoleAssignments />} />}
+            />
           </Route>
           
           {/* 行銷區 */}
-          <Route path="/marketing/youtube" element={<YoutubeComments />} />
-          <Route path="/marketing/instagram-posts" element={<InstagramPosts />} />
+          <Route
+            path="/marketing/youtube"
+            element={<PermissionRoute path="/marketing/youtube" element={<YoutubeComments />} />}
+          />
+          <Route
+            path="/marketing/instagram-posts"
+            element={<PermissionRoute path="/marketing/instagram-posts" element={<InstagramPosts />} />}
+          />
           
           {/* ✨ AI 圖書系統區 */}
-          <Route path="/library/generate" element={<StoryGenerator />} />
-          <Route path="/library/books" element={<BookManagement />} />
+          <Route
+            path="/library/generate"
+            element={<PermissionRoute path="/library/generate" element={<StoryGenerator />} />}
+          />
+          <Route
+            path="/library/books"
+            element={<PermissionRoute path="/library/books" element={<BookManagement />} />}
+          />
           
-          <Route path="/library/player" element={<PlayerList />} />
+          <Route
+            path="/library/player"
+            element={<PermissionRoute path="/library/player" element={<PlayerList />} />}
+          />
 
           {/* 注意：因為 generate 和 player 頁面還沒做，
              如果點選單會是一片空白。
