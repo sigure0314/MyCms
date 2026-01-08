@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Card, Descriptions, Spin } from 'antd';
-import api, { UserSummary } from '../services/api';
+import api from '../services/api';
+import type { UserSummary } from '../services/api';
 
 interface TokenPayload {
   nameid?: string;
