@@ -1,4 +1,4 @@
-import { HashRouter, NavLink, Route, Routes } from 'react-router-dom';
+import { NavLink, Route, Routes } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import { v4 as uuidv4 } from 'uuid';
@@ -93,23 +93,21 @@ const saveFallbackOrders = (orders: Order[]) => {
 
 const PosAsyncKitchen = () => (
   <div className="pos-kitchen-page">
-    <HashRouter>
-      <header className="page-header">
-        <h1>PosAsyncKitchen</h1>
-        <nav className="nav-tabs">
-          <NavLink end to="/" className={({ isActive }) => (isActive ? 'nav-tab active' : 'nav-tab')}>
-            POS 點餐
-          </NavLink>
-          <NavLink to="/kitchen" className={({ isActive }) => (isActive ? 'nav-tab active' : 'nav-tab')}>
-            廚房看板
-          </NavLink>
-        </nav>
-      </header>
-      <Routes>
-        <Route path="/" element={<PosOrderPage />} />
-        <Route path="/kitchen" element={<KitchenBoard />} />
-      </Routes>
-    </HashRouter>
+    <header className="page-header">
+      <h1>PosAsyncKitchen</h1>
+      <nav className="nav-tabs">
+        <NavLink end to="" className={({ isActive }) => (isActive ? 'nav-tab active' : 'nav-tab')}>
+          POS 點餐
+        </NavLink>
+        <NavLink to="kitchen" className={({ isActive }) => (isActive ? 'nav-tab active' : 'nav-tab')}>
+          廚房看板
+        </NavLink>
+      </nav>
+    </header>
+    <Routes>
+      <Route index element={<PosOrderPage />} />
+      <Route path="kitchen" element={<KitchenBoard />} />
+    </Routes>
   </div>
 );
 
