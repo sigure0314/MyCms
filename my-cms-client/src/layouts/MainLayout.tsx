@@ -16,6 +16,7 @@ import {
   YoutubeOutlined,
   InstagramOutlined,
   SettingOutlined,
+  ShopOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 
@@ -97,6 +98,21 @@ const MainLayout: React.FC = () => {
           key: '/library/player', 
           icon: <PlayCircleOutlined />, 
           label: '童書播放' 
+        },
+      ],
+    },
+    {
+      key: 'sub-pos-kitchen',
+      icon: <ShopOutlined />,
+      label: 'POS / Kitchen',
+      children: [
+        {
+          key: '/pos-async-kitchen',
+          label: 'POS 點餐',
+        },
+        {
+          key: '/pos-async-kitchen#/kitchen',
+          label: '廚房看板',
         },
       ],
     }
