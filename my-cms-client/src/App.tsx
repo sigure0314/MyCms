@@ -25,6 +25,7 @@ import PlayerList from './pages/player/PlayerList';
 import PersonalReader from './pages/player/PersonalReader'; // (這個可以參照之前的個人閱讀模式寫法)
 import StoryTeller from './pages/player/StoryTeller';
 import PersonalSettings from './pages/PersonalSettings';
+import PosAsyncKitchen from './pages/pos/PosAsyncKitchen';
 
 const App = () => (
   <BrowserRouter>
@@ -97,6 +98,11 @@ const App = () => (
           <Route
             path="/library/player"
             element={<PermissionRoute path="/library/player" element={<PlayerList />} />}
+          />
+
+          <Route
+            path="/kitchen"
+            element={<PermissionRoute path="/kitchen" element={<PosAsyncKitchen />} />}
           />
 
           {/* 注意：因為 generate 和 player 頁面還沒做，

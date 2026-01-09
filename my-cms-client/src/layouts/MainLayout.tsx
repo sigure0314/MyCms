@@ -16,6 +16,7 @@ import {
   YoutubeOutlined,
   InstagramOutlined,
   SettingOutlined,
+  ShopOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 
@@ -99,7 +100,12 @@ const MainLayout: React.FC = () => {
           label: '童書播放' 
         },
       ],
-    }
+    },
+    {
+      key: '/kitchen',
+      icon: <ShopOutlined />,
+      label: 'POS 廚房看板',
+    },
   ];
 
   const filterMenuItems = (items: MenuProps['items']): MenuProps['items'] =>
