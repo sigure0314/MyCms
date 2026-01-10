@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { MenuItem } from '../types/posAsyncKitchen';
 
 // 1. 定義並匯出型別 (DTO)
 // 這樣 StoryGenerator.tsx 就可以 import 這個 interface 來用
@@ -70,6 +71,20 @@ export interface Permission {
   icon?: string | null;
   sortOrder: number;
   isEnabled: boolean;
+}
+
+export interface CreateMenuItemRequest {
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+}
+
+export interface UpdateMenuItemRequest {
+  name: string;
+  description: string;
+  price: number;
+  category: string;
 }
 
 // 2. 設定 Base URL
@@ -181,6 +196,18 @@ const api = {
   },
   updateRolePermissions: (roleId: number, permissionIds: number[]) => {
     return axiosInstance.put(`/roles/${roleId}/permissions`, { permissionIds });
+  },
+  getMenuItems: () => {
+    return axiosInstance.get<MenuItem[]>('/menu');
+  },
+  createMenuItem: (data: CreateMenuItemRequest) => {
+    return axiosInstance.post<MenuItem>('/menu', data);
+  },
+  updateMenuItem: (id: number, data: UpdateMenuItemRequest) => {
+    return axiosInstance.put<MenuItem>(`/menu/${id}`, data);
+  },
+  deleteMenuItem: (id: number) => {
+    return axiosInstance.delete(`/menu/${id}`);
   }
 };
 

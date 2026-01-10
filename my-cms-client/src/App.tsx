@@ -26,6 +26,7 @@ import PersonalReader from './pages/player/PersonalReader'; // (這個可以參�
 import StoryTeller from './pages/player/StoryTeller';
 import PersonalSettings from './pages/PersonalSettings';
 import PosAsyncKitchen from './pages/PosAsyncKitchen';
+import MenuManagement from './pages/pos/MenuManagement';
 
 const App = () => (
   <BrowserRouter>
@@ -99,6 +100,11 @@ const App = () => (
           <Route
             path="/library/player"
             element={<PermissionRoute path="/library/player" element={<PlayerList />} />}
+          />
+
+          <Route
+            path="/pos/menu"
+            element={<PermissionRoute path="/pos/menu" element={<MenuManagement />} />}
           />
 
           {/* 注意：因為 generate 和 player 頁面還沒做，
