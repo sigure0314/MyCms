@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Space, Table, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import api, { CreateMenuItemRequest, UpdateMenuItemRequest } from '../../services/api';
+import api, { type CreateMenuItemRequest, type UpdateMenuItemRequest } from '../../services/api';
 import type { MenuItem } from '../../types/posAsyncKitchen';
 
 const { Title, Text } = Typography;
