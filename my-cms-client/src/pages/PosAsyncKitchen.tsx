@@ -91,6 +91,19 @@ const saveFallbackOrders = (orders: Order[]) => {
   localStorage.setItem(FALLBACK_STORAGE_KEY, JSON.stringify(orders));
 };
 
+const parseJsonResponse = async <T,>(response: Response, errorMessage: string): Promise<T> => {
+  if (!response.ok) {
+    throw new Error(errorMessage);
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    throw new Error(`${errorMessage}: Expected JSON but received ${contentType ?? 'unknown content type'}`);
+  }
+
+  return (await response.json()) as T;
+};
+
 const PosAsyncKitchen = () => (
   <div className="pos-kitchen-page">
     <header className="page-header">
@@ -123,10 +136,7 @@ const PosOrderPage = () => {
     const fetchMenu = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/orders/menu`);
-        if (!response.ok) {
-          throw new Error('Menu fetch failed');
-        }
-        const data = (await response.json()) as MenuItem[];
+        const data = await parseJsonResponse<MenuItem[]>(response, 'Menu fetch failed');
         setMenu(data);
         setUseFallback(false);
       } catch (error) {
@@ -321,10 +331,7 @@ const KitchenBoard = () => {
     const fetchOrders = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/orders`);
-        if (!response.ok) {
-          throw new Error('Order fetch failed');
-        }
-        const data = (await response.json()) as Order[];
+        const data = await parseJsonResponse<Order[]>(response, 'Order fetch failed');
         setOrders(data);
         setUseFallback(false);
       } catch (error) {
