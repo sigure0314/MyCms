@@ -107,6 +107,10 @@ const MainLayout: React.FC = () => {
       label: 'POS / Kitchen',
       children: [
         {
+          key: '/pos/menu',
+          label: '菜單管理',
+        },
+        {
           key: '/pos-async-kitchen',
           label: 'POS 點餐',
         },
