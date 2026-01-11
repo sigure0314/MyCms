@@ -97,11 +97,21 @@ const parseJsonResponse = async <T,>(response: Response, errorMessage: string): 
   }
 
   const contentType = response.headers.get('content-type');
+  const bodyText = await response.text();
+  const trimmed = bodyText.trim();
+  const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
+
   if (!contentType || !contentType.includes('application/json')) {
-    throw new Error(`${errorMessage}: Expected JSON but received ${contentType ?? 'unknown content type'}`);
+    if (!looksLikeJson) {
+      throw new Error(`${errorMessage}: Expected JSON but received ${contentType ?? 'unknown content type'}`);
+    }
   }
 
-  return (await response.json()) as T;
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch (error) {
+    throw new Error(`${errorMessage}: Failed to parse JSON response`, { cause: error });
+  }
 };
 
 const PosAsyncKitchen = () => (
