@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyCMS.API.Data;
 using MyCMS.API.DTOs;
+using MyCMS.API.Models;
 
 namespace MyCMS.API.Controllers;
 
@@ -29,7 +30,8 @@ public class UsersController : ControllerBase
                 u.Id,
                 u.Username,
                 u.Email,
-                Role = u.Role.Name
+                Role = u.Role.Name,
+                Status = u.Status.ToString()
             })
             .ToListAsync();
 
@@ -61,7 +63,32 @@ public class UsersController : ControllerBase
             user.Id,
             user.Username,
             user.Email,
-            Role = user.Role.Name
+            Role = user.Role.Name,
+            Status = user.Status.ToString()
+        });
+    }
+
+    [HttpPatch("{id:int}/approval")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateUserApproval(int id, UpdateUserApprovalRequest request)
+    {
+        var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        user.Status = request.Approved ? UserStatus.Approved : UserStatus.Pending;
+        await _context.SaveChangesAsync();
+        await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+
+        return Ok(new
+        {
+            user.Id,
+            user.Username,
+            user.Email,
+            Role = user.Role.Name,
+            Status = user.Status.ToString()
         });
     }
 }

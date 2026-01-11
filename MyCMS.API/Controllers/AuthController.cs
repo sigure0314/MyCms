@@ -26,7 +26,8 @@ public class AuthController : ControllerBase {
             Username = req.Username,
             Email = req.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-            RoleId = 2 // Default Editor
+            RoleId = 2, // Default Editor
+            Status = UserStatus.Pending
         };
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
@@ -34,10 +35,12 @@ public class AuthController : ControllerBase {
         // Reload role for token generation
         await _context.Entry(user).Reference(u => u.Role).LoadAsync();
 
-        return Ok(new AuthResponse { 
-            Token = _tokenService.CreateToken(user), 
-            Username = user.Username, 
-            Role = user.Role.Name 
+        return Ok(new AuthResponse
+        {
+            Token = string.Empty,
+            Username = user.Username,
+            Role = user.Role.Name,
+            Status = user.Status.ToString()
         });
     }
 
@@ -45,11 +48,13 @@ public class AuthController : ControllerBase {
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest req) {
         var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == req.Username);
         if (user == null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash)) return Unauthorized();
+        if (user.Status != UserStatus.Approved) return Forbid();
         
         return Ok(new AuthResponse { 
             Token = _tokenService.CreateToken(user), 
             Username = user.Username, 
-            Role = user.Role.Name 
+            Role = user.Role.Name,
+            Status = user.Status.ToString()
         });
     }
 }
