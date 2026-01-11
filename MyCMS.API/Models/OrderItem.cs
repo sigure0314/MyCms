@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MyCMS.API.Models;
 
@@ -7,6 +8,7 @@ public class OrderItem {
 
     public Guid OrderId { get; set; }
 
+    [JsonIgnore]
     public Order? Order { get; set; }
 
     public int MenuItemId { get; set; }
