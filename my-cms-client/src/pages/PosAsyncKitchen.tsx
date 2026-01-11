@@ -5,7 +5,16 @@ import { v4 as uuidv4 } from 'uuid';
 import type { CreateOrderRequest, MenuItem, Order } from '../types/posAsyncKitchen';
 import './PosAsyncKitchen.css';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+const normalizeApiBaseUrl = (value: string | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return '/api';
+  }
+
+  return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+};
+
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL as string | undefined);
 const FALLBACK_STORAGE_KEY = 'posAsyncKitchenOrders';
 
 const fallbackMenu: MenuItem[] = [
@@ -67,11 +76,11 @@ const fallbackOrders: Order[] = [
   },
 ];
 
+const buildApiUrl = (path: string) => (path.startsWith('/') ? `${API_BASE_URL}${path}` : `${API_BASE_URL}/${path}`);
+
 const getHubUrl = () => {
-  if (API_BASE_URL.endsWith('/api')) {
-    return `${API_BASE_URL.replace(/\/api$/, '')}/hubs/orders`;
-  }
-  return `${API_BASE_URL}/hubs/orders`;
+  const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
+  return `${base}/hubs/orders`;
 };
 
 const loadFallbackOrders = (): Order[] => {
@@ -145,7 +154,7 @@ const PosOrderPage = () => {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/orders/menu`);
+        const response = await fetch(buildApiUrl('/orders/menu'));
         const data = await parseJsonResponse<MenuItem[]>(response, 'Menu fetch failed');
         setMenu(data);
         setUseFallback(false);
@@ -209,7 +218,7 @@ const PosOrderPage = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`, {
+      const response = await fetch(buildApiUrl('/orders'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
@@ -340,7 +349,7 @@ const KitchenBoard = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/orders`);
+        const response = await fetch(buildApiUrl('/orders'));
         const data = await parseJsonResponse<Order[]>(response, 'Order fetch failed');
         setOrders(data);
         setUseFallback(false);
@@ -410,7 +419,7 @@ const KitchenBoard = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
+      const response = await fetch(buildApiUrl(`/orders/${id}/status`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
