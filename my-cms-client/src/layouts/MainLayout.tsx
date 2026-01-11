@@ -115,7 +115,7 @@ const MainLayout: React.FC = () => {
           label: 'POS 點餐',
         },
         {
-          key: '/pos-async-kitchen#/kitchen',
+          key: '/pos-async-kitchen/kitchen',
           label: '廚房看板',
         },
       ],
@@ -153,6 +153,11 @@ const MainLayout: React.FC = () => {
 
   // 處理點擊事件
   const handleMenuClick = (e: { key: string }) => {
+    if (e.key === '/pos-async-kitchen' || e.key === '/pos-async-kitchen/kitchen') {
+      window.open(e.key, '_blank', 'noopener,noreferrer,width=1280,height=800');
+      return;
+    }
+
     navigate(e.key);
   };
 
