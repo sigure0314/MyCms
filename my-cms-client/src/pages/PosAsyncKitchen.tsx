@@ -123,6 +123,11 @@ const parseJsonResponse = async <T,>(response: Response, errorMessage: string): 
   }
 };
 
+const sortOrdersByCreatedAt = (orders: Order[]) =>
+  [...orders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+const getOrderPillClassName = (status: string) => (status === 'Completed' ? 'order-pill is-completed' : 'order-pill');
+
 const PosAsyncKitchen = () => (
   <div className="pos-kitchen-page">
     <header className="page-header">
@@ -145,11 +150,15 @@ const PosAsyncKitchen = () => (
 
 const PosOrderPage = () => {
   const [menu, setMenu] = useState<MenuItem[]>(fallbackMenu);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<Record<number, number>>({});
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
-  const [useFallback, setUseFallback] = useState(false);
+  const [menuOffline, setMenuOffline] = useState(false);
+  const [ordersOffline, setOrdersOffline] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const useFallback = menuOffline || ordersOffline;
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -157,16 +166,69 @@ const PosOrderPage = () => {
         const response = await fetch(buildApiUrl('/orders/menu'));
         const data = await parseJsonResponse<MenuItem[]>(response, 'Menu fetch failed');
         setMenu(data);
-        setUseFallback(false);
+        setMenuOffline(false);
       } catch (error) {
         console.warn('POS menu fetch failed, fallback to in-memory menu.', error);
         setMenu(fallbackMenu);
-        setUseFallback(true);
+        setMenuOffline(true);
       }
     };
 
     void fetchMenu();
   }, []);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch(buildApiUrl('/orders'));
+        const data = await parseJsonResponse<Order[]>(response, 'Order fetch failed');
+        setOrders(sortOrdersByCreatedAt(data));
+        setOrdersOffline(false);
+      } catch (error) {
+        console.warn('POS orders fetch failed, fallback to local orders.', error);
+        const fallback = loadFallbackOrders();
+        setOrders(sortOrdersByCreatedAt(fallback));
+        setOrdersOffline(true);
+      }
+    };
+
+    void fetchOrders();
+  }, []);
+
+  useEffect(() => {
+    if (ordersOffline) {
+      return undefined;
+    }
+
+    const connection = new HubConnectionBuilder().withUrl(getHubUrl()).withAutomaticReconnect().build();
+
+    connection.on('OrderQueued', (order: Order) => {
+      setOrders((prev) => sortOrdersByCreatedAt([...prev, order]));
+    });
+
+    connection.on('OrderStatusUpdated', (payload: { id: string; status: string }) => {
+      setOrders((prev) =>
+        prev.map((order) => (order.id === payload.id ? { ...order, status: payload.status } : order)),
+      );
+    });
+
+    const startConnection = async () => {
+      try {
+        await connection.start();
+      } catch (error) {
+        console.warn('POS SignalR connection failed, fallback to offline mode.', error);
+        const fallback = loadFallbackOrders();
+        setOrders(sortOrdersByCreatedAt(fallback));
+        setOrdersOffline(true);
+      }
+    };
+
+    void startConnection();
+
+    return () => {
+      void connection.stop();
+    };
+  }, [ordersOffline]);
 
   const cartItems = useMemo(() => {
     return Object.entries(cart)
@@ -224,9 +286,8 @@ const PosOrderPage = () => {
         body: JSON.stringify(request),
       });
 
-      if (!response.ok) {
-        throw new Error('Create order failed');
-      }
+      const created = await parseJsonResponse<Order>(response, 'Create order failed');
+      setOrders((prev) => sortOrdersByCreatedAt([...prev, created]));
 
       setCart({});
       setCustomerName('');
@@ -252,10 +313,11 @@ const PosOrderPage = () => {
       };
       const updated = [...fallbackOrdersList, newOrder];
       saveFallbackOrders(updated);
+      setOrders(sortOrdersByCreatedAt(updated));
       setCart({});
       setCustomerName('');
       setNotes('');
-      setUseFallback(true);
+      setOrdersOffline(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -265,19 +327,57 @@ const PosOrderPage = () => {
     <div>
       {useFallback && <div className="offline-banner">離線示範模式：菜單與訂單皆為本地資料。</div>}
       <div className="layout">
-        <div className="card">
-          <h2>菜單</h2>
-          <div className="menu-grid">
-            {menu.map((item) => (
-              <div key={item.id} className="card menu-card">
-                <h3>{item.name}</h3>
-                <p>{item.description}</p>
-                <p>NT$ {item.price.toFixed(2)}</p>
-                <button className="primary-button" type="button" onClick={() => updateQuantity(item.id, 1)}>
-                  加入購物車
-                </button>
-              </div>
-            ))}
+        <div className="stack">
+          <div className="card">
+            <h2>菜單</h2>
+            <div className="menu-grid">
+              {menu.map((item) => (
+                <div key={item.id} className="card menu-card">
+                  <h3>{item.name}</h3>
+                  <p>{item.description}</p>
+                  <p>NT$ {item.price.toFixed(2)}</p>
+                  <button className="primary-button" type="button" onClick={() => updateQuantity(item.id, 1)}>
+                    加入購物車
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="card">
+            <h2>送出清單</h2>
+            <div className="order-list">
+              {orders.length === 0 && <span>尚無送出訂單。</span>}
+              {orders.map((order) => {
+                const orderTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                return (
+                  <div key={order.id} className="order-card">
+                    <div className="order-header">
+                      <div>
+                        <strong>{order.customerName}</strong>
+                        <div className={getOrderPillClassName(order.status)}>{order.status}</div>
+                      </div>
+                      <div className="order-meta">
+                        {new Date(order.createdAt).toLocaleString('zh-TW', { hour12: false })}
+                      </div>
+                    </div>
+                    <div className="order-items">
+                      {order.items.map((item) => (
+                        <div key={`${order.id}-${item.id}`} className="order-item">
+                          <span>
+                            {item.name} x {item.quantity}
+                          </span>
+                          <span>NT$ {(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="order-total">
+                      <strong>總計</strong>
+                      <strong>NT$ {orderTotal.toFixed(2)}</strong>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
         <div className="card">
@@ -343,7 +443,6 @@ const PosOrderPage = () => {
 const KitchenBoard = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [useFallback, setUseFallback] = useState(false);
-  const [completedOrders, setCompletedOrders] = useState<Record<string, boolean>>({});
   const [completedItems, setCompletedItems] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -433,8 +532,9 @@ const KitchenBoard = () => {
     }
   };
 
-  const toggleOrderDone = (id: string) => {
-    setCompletedOrders((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleOrderDone = (order: Order) => {
+    const nextStatus = order.status === 'Completed' ? 'Preparing' : 'Completed';
+    void updateStatus(order.id, nextStatus);
   };
 
   const toggleItemDone = (orderId: string, itemId: number) => {
@@ -454,14 +554,14 @@ const KitchenBoard = () => {
                 <div className="order-header">
                   <div>
                     <strong>{order.customerName}</strong>
-                    <div className="order-pill">{order.status}</div>
+                    <div className={getOrderPillClassName(order.status)}>{order.status}</div>
                   </div>
                   <div className="order-actions">
                     <label>
                       <input
                         type="checkbox"
-                        checked={!!completedOrders[order.id]}
-                        onChange={() => toggleOrderDone(order.id)}
+                        checked={order.status === 'Completed'}
+                        onChange={() => toggleOrderDone(order)}
                       />
                       整單完成
                     </label>
