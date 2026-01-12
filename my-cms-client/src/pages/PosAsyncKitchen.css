@@ -42,6 +42,11 @@
   padding: 24px 32px;
 }
 
+.stack {
+  display: grid;
+  gap: 24px;
+}
+
 .card {
   background: #ffffff;
   border-radius: 16px;
@@ -100,6 +105,11 @@
   color: #166534;
   font-size: 12px;
   font-weight: 600;
+}
+
+.order-pill.is-completed {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .cart-list {
@@ -174,6 +184,17 @@
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.order-meta {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.order-total {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
 }
 
 .offline-banner {
