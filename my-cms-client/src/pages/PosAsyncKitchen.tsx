@@ -1,4 +1,4 @@
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import { v4 as uuidv4 } from 'uuid';
@@ -131,15 +131,7 @@ const getOrderPillClassName = (status: string) => (status === 'Completed' ? 'ord
 const PosAsyncKitchen = () => (
   <div className="pos-kitchen-page">
     <header className="page-header">
-      <h1>PosAsyncKitchen</h1>
-      <nav className="nav-tabs">
-        <NavLink end to="" className={({ isActive }) => (isActive ? 'nav-tab active' : 'nav-tab')}>
-          POS 點餐
-        </NavLink>
-        <NavLink to="kitchen" className={({ isActive }) => (isActive ? 'nav-tab active' : 'nav-tab')}>
-          廚房看板
-        </NavLink>
-      </nav>
+      <h1>Signlar同步點餐系統</h1>
     </header>
     <Routes>
       <Route index element={<PosOrderPage />} />
