@@ -127,6 +127,14 @@ const sortOrdersByCreatedAt = (orders: Order[]) =>
   [...orders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
 const getOrderPillClassName = (status: string) => (status === 'Completed' ? 'order-pill is-completed' : 'order-pill');
+const ORDER_STATUS_OPTIONS = ['Queued', 'Preparing', 'Ready', 'Completed'];
+const ORDER_STATUS_FILTER_OPTIONS = [
+  { value: 'All', label: '全部' },
+  ...ORDER_STATUS_OPTIONS.map((status) => ({
+    value: status,
+    label: status,
+  })),
+];
 
 const PosAsyncKitchen = () => (
   <div className="pos-kitchen-page">
@@ -149,6 +157,7 @@ const PosOrderPage = () => {
   const [menuOffline, setMenuOffline] = useState(false);
   const [ordersOffline, setOrdersOffline] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');
 
   const useFallback = menuOffline || ordersOffline;
 
@@ -239,6 +248,10 @@ const PosOrderPage = () => {
   }, [cart, menu]);
 
   const total = useMemo(() => cartItems.reduce((sum, item) => sum + item.lineTotal, 0), [cartItems]);
+  const filteredOrders = useMemo(
+    () => (statusFilter === 'All' ? orders : orders.filter((order) => order.status === statusFilter)),
+    [orders, statusFilter],
+  );
 
   const updateQuantity = (menuItemId: number, delta: number) => {
     setCart((prev) => {
@@ -337,9 +350,23 @@ const PosOrderPage = () => {
           </div>
           <div className="card">
             <h2>送出清單</h2>
+            <div className="order-actions">
+              <label>
+                列表狀態
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                  {ORDER_STATUS_FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div className="order-list">
-              {orders.length === 0 && <span>尚無送出訂單。</span>}
-              {orders.map((order) => {
+              {filteredOrders.length === 0 && (
+                <span>{orders.length === 0 ? '尚無送出訂單。' : '此狀態尚無訂單。'}</span>
+              )}
+              {filteredOrders.map((order) => {
                 const orderTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
                 return (
                   <div key={order.id} className="order-card">
@@ -558,10 +585,11 @@ const KitchenBoard = () => {
                       整單完成
                     </label>
                     <select value={order.status} onChange={(event) => updateStatus(order.id, event.target.value)}>
-                      <option value="Queued">Queued</option>
-                      <option value="Preparing">Preparing</option>
-                      <option value="Ready">Ready</option>
-                      <option value="Completed">Completed</option>
+                      {ORDER_STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
