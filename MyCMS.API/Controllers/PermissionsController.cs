@@ -54,6 +54,7 @@ public class PermissionsController : ControllerBase {
         }
 
         var permission = new Permission {
+            Id = (await _context.Permissions.MaxAsync(p => (int?)p.Id) ?? 0) + 1,
             ParentId = request.ParentId,
             Code = normalizedCode,
             Name = request.Name.Trim(),
