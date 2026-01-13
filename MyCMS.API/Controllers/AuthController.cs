@@ -31,25 +31,43 @@ public class AuthController : ControllerBase {
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
         
-        // Reload role for token generation
-        await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+        var userWithRole = await _context.Users
+            .Include(u => u.Role)
+            .ThenInclude(r => r.RolePermissions)
+            .ThenInclude(rp => rp.Permission)
+            .FirstAsync(u => u.Id == user.Id);
+        var permissions = GetPermissionCodes(userWithRole.Role);
 
         return Ok(new AuthResponse { 
-            Token = _tokenService.CreateToken(user), 
-            Username = user.Username, 
-            Role = user.Role.Name 
+            Token = _tokenService.CreateToken(userWithRole, permissions),
+            Username = userWithRole.Username,
+            Role = userWithRole.Role.Name
         });
     }
 
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest req) {
-        var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == req.Username);
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .ThenInclude(r => r.RolePermissions)
+            .ThenInclude(rp => rp.Permission)
+            .FirstOrDefaultAsync(u => u.Username == req.Username);
         if (user == null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash)) return Unauthorized();
+        var permissions = GetPermissionCodes(user.Role);
         
         return Ok(new AuthResponse { 
-            Token = _tokenService.CreateToken(user), 
-            Username = user.Username, 
-            Role = user.Role.Name 
+            Token = _tokenService.CreateToken(user, permissions),
+            Username = user.Username,
+            Role = user.Role.Name
         });
+    }
+
+    private static List<string> GetPermissionCodes(Role role) {
+        return role.RolePermissions
+            .Where(rp => rp.IsAllowed && rp.Permission.IsEnabled)
+            .Select(rp => rp.Permission.Code)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }
