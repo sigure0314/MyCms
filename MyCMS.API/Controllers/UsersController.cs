@@ -19,6 +19,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "Permission:api.users.get")]
     public async Task<IActionResult> GetUsers()
     {
         // 這裡我們只選取需要的欄位，不要把 PasswordHash 傳給前端，這樣才安全
@@ -37,7 +38,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPatch("{id:int}/role")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:api.users.update-role")]
     public async Task<IActionResult> UpdateUserRole(int id, UpdateUserRoleRequest request)
     {
         var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);

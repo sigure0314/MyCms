@@ -33,6 +33,7 @@ public class InstagramPostsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "Permission:api.instagram.get")]
     public async Task<ActionResult<IEnumerable<InstagramPostDto>>> GetPosts()
     {
         var posts = await _context.InstagramPosts
@@ -44,6 +45,7 @@ public class InstagramPostsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [Authorize(Policy = "Permission:api.instagram.get-one")]
     public async Task<ActionResult<InstagramPostDto>> GetPost(int id)
     {
         var post = await _context.InstagramPosts.FindAsync(id);
@@ -56,6 +58,7 @@ public class InstagramPostsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "Permission:api.instagram.create")]
     public async Task<ActionResult<InstagramPostDto>> CreatePost([FromForm] CreateInstagramPostRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Caption))
@@ -120,6 +123,7 @@ public class InstagramPostsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = "Permission:api.instagram.update")]
     public async Task<ActionResult<InstagramPostDto>> UpdatePost(int id, [FromBody] UpdateInstagramPostRequest request)
     {
         var post = await _context.InstagramPosts.FindAsync(id);

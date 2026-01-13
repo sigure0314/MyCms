@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyCMS.API.DTOs; // ✅ 修正這裡
 using MyCMS.API.Services;
@@ -7,6 +8,7 @@ namespace MyCMS.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class StoryController : ControllerBase
 {
     private readonly StoryService _storyService;
@@ -18,6 +20,7 @@ public class StoryController : ControllerBase
 
     // Step 1: 生成文字草稿 (快速)
     [HttpPost("draft")]
+    [Authorize(Policy = "Permission:api.story.draft")]
     public async Task<ActionResult<StoryDraftDto>> GenerateDraft([FromBody] GenerateScriptRequest request)
     {
         if (string.IsNullOrEmpty(request.Topic)) return BadRequest("請輸入主題");
@@ -35,6 +38,7 @@ public class StoryController : ControllerBase
 
     // Step 2: 定稿並生成圖片 (慢速，需等待)
     [HttpPost("finalize")]
+    [Authorize(Policy = "Permission:api.story.finalize")]
     public async Task<IActionResult> FinalizeStory([FromBody] FinalizeStoryRequest request)
     {
         if (request.Pages == null || request.Pages.Count == 0) return BadRequest("沒有頁面內容");
@@ -55,6 +59,7 @@ public class StoryController : ControllerBase
 
     // 新增：根據 ID 取得故事內容 (GET: api/story/1)
     [HttpGet("{id}")]
+    [Authorize(Policy = "Permission:api.story.get")]
     public IActionResult GetStory(int id)
     {
         // TODO: 這裡應該要從資料庫 _context.Books.Include(b => b.Pages).FirstOrDefault(b => b.Id == id);

@@ -18,6 +18,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpGet]
+    [Authorize(Policy = "Permission:api.roles.get")]
     public async Task<ActionResult<IEnumerable<RoleResponse>>> GetRoles() {
         var roles = await _context.Roles
             .Select(r => new {
@@ -33,7 +34,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:api.roles.create")]
     public async Task<ActionResult<RoleResponse>> CreateRole(RoleUpsertRequest request) {
         if (string.IsNullOrWhiteSpace(request.Name)) {
             return BadRequest("Role name is required.");
@@ -53,7 +54,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:api.roles.update")]
     public async Task<ActionResult<RoleResponse>> UpdateRole(int id, RoleUpsertRequest request) {
         if (string.IsNullOrWhiteSpace(request.Name)) {
             return BadRequest("Role name is required.");
@@ -78,7 +79,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:api.roles.delete")]
     public async Task<IActionResult> DeleteRole(int id) {
         var role = await _context.Roles.Include(r => r.Users).FirstOrDefaultAsync(r => r.Id == id);
         if (role == null) {
@@ -95,6 +96,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpGet("{id:int}/permissions")]
+    [Authorize(Policy = "Permission:api.roles.permissions.get")]
     public async Task<ActionResult<IEnumerable<int>>> GetRolePermissions(int id) {
         var role = await _context.Roles
             .Include(r => r.RolePermissions)
@@ -108,7 +110,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpPut("{id:int}/permissions")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:api.roles.permissions.update")]
     public async Task<IActionResult> UpdateRolePermissions(int id, UpdateRolePermissionsRequest request) {
         var role = await _context.Roles
             .Include(r => r.RolePermissions)
