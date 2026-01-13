@@ -18,6 +18,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpGet]
+    [Authorize(Policy = "Permission:permissions.view")]
     public async Task<ActionResult<IEnumerable<PermissionResponse>>> GetPermissions() {
         var permissions = await _context.Permissions
             .OrderBy(p => p.SortOrder)
@@ -41,7 +42,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:permissions.manage")]
     public async Task<ActionResult<PermissionResponse>> CreatePermission(PermissionUpsertRequest request) {
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name)) {
             return BadRequest("Permission code and name are required.");
@@ -88,7 +89,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:permissions.manage")]
     public async Task<ActionResult<PermissionResponse>> UpdatePermission(int id, PermissionUpsertRequest request) {
         if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name)) {
             return BadRequest("Permission code and name are required.");
@@ -135,7 +136,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "Permission:permissions.manage")]
     public async Task<IActionResult> DeletePermission(int id) {
         var permission = await _context.Permissions.FindAsync(id);
         if (permission == null) {
