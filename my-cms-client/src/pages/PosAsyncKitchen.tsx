@@ -17,37 +17,6 @@ const normalizeApiBaseUrl = (value: string | undefined) => {
 const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL as string | undefined);
 const FALLBACK_STORAGE_KEY = 'posAsyncKitchenOrders';
 
-const fallbackMenu: MenuItem[] = [
-  {
-    id: 1,
-    name: 'Classic Burger',
-    description: 'Juicy beef patty with cheddar, lettuce, and tomato.',
-    price: 8.5,
-    category: 'Main',
-  },
-  {
-    id: 2,
-    name: 'Veggie Bowl',
-    description: 'Quinoa, roasted veggies, and herb dressing.',
-    price: 7.2,
-    category: 'Main',
-  },
-  {
-    id: 3,
-    name: 'Sweet Potato Fries',
-    description: 'Crispy fries with smoky paprika salt.',
-    price: 3.8,
-    category: 'Side',
-  },
-  {
-    id: 4,
-    name: 'Iced Lemon Tea',
-    description: 'Fresh lemon brewed tea with ice.',
-    price: 2.5,
-    category: 'Drink',
-  },
-];
-
 const fallbackOrders: Order[] = [
   {
     id: 'offline-1',
@@ -149,17 +118,16 @@ const PosAsyncKitchen = () => (
 );
 
 const PosOrderPage = () => {
-  const [menu, setMenu] = useState<MenuItem[]>(fallbackMenu);
+  const [menu, setMenu] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<Record<number, number>>({});
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
-  const [menuOffline, setMenuOffline] = useState(false);
   const [ordersOffline, setOrdersOffline] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
 
-  const useFallback = menuOffline || ordersOffline;
+  const useFallback = ordersOffline;
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -167,11 +135,9 @@ const PosOrderPage = () => {
         const response = await fetch(buildApiUrl('/orders/menu'));
         const data = await parseJsonResponse<MenuItem[]>(response, 'Menu fetch failed');
         setMenu(data);
-        setMenuOffline(false);
       } catch (error) {
-        console.warn('POS menu fetch failed, fallback to in-memory menu.', error);
-        setMenu(fallbackMenu);
-        setMenuOffline(true);
+        console.warn('POS menu fetch failed.', error);
+        setMenu([]);
       }
     };
 
@@ -330,7 +296,7 @@ const PosOrderPage = () => {
 
   return (
     <div>
-      {useFallback && <div className="offline-banner">離線示範模式：菜單與訂單皆為本地資料。</div>}
+      {useFallback && <div className="offline-banner">離線示範模式：訂單清單採用本地資料。</div>}
       <div className="layout">
         <div className="stack">
           <div className="card">
