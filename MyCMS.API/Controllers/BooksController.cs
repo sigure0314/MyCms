@@ -28,6 +28,7 @@ public class BooksController : ControllerBase
 
     // GET: api/Books
     [HttpGet]
+    [Authorize(Policy = "Permission:api.books.get")]
     public async Task<ActionResult<IEnumerable<Book>>> GetBooks()
     {
         // 1. 從資料庫撈取資料，並包含關聯的 Pages

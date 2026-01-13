@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using MyCMS.API.Data;
@@ -10,6 +11,7 @@ namespace MyCMS.API.Controllers;
 
 [ApiController]
 [Route("api/orders")]
+[Authorize]
 public class OrdersController : ControllerBase {
     private readonly IOrderRepository _repository;
     private readonly MenuService _menuService;
@@ -22,17 +24,20 @@ public class OrdersController : ControllerBase {
     }
 
     [HttpGet("menu")]
+    [Authorize(Policy = "Permission:api.orders.menu")]
     public ActionResult<IEnumerable<MenuItem>> GetMenu() {
         return Ok(_menuService.GetMenu());
     }
 
     [HttpGet]
+    [Authorize(Policy = "Permission:api.orders.get")]
     public async Task<ActionResult<IEnumerable<Order>>> GetOrders() {
         var orders = await _repository.GetOrdersAsync();
         return Ok(orders);
     }
 
     [HttpPost]
+    [Authorize(Policy = "Permission:api.orders.create")]
     public async Task<ActionResult<Order>> CreateOrder([FromBody] CreateOrderRequest request) {
         if (!ModelState.IsValid) {
             return ValidationProblem(ModelState);
@@ -58,6 +63,7 @@ public class OrdersController : ControllerBase {
     }
 
     [HttpPut("{id:guid}/status")]
+    [Authorize(Policy = "Permission:api.orders.update-status")]
     public async Task<ActionResult<Order>> UpdateStatus(Guid id, [FromBody] UpdateOrderStatusRequest request) {
         if (!ModelState.IsValid) {
             return ValidationProblem(ModelState);
