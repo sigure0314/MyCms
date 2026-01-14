@@ -11,10 +11,16 @@ namespace MyCMS.API.Controllers;
 public class FrameController : ControllerBase
 {
     private readonly FramePlaylistService _playlistService;
+    private readonly Supabase.Client _supabase;
+    private readonly string _supabaseUrl;
+    private readonly string _bucketName;
 
-    public FrameController(FramePlaylistService playlistService)
+    public FrameController(FramePlaylistService playlistService, Supabase.Client supabase, IConfiguration config)
     {
         _playlistService = playlistService;
+        _supabase = supabase;
+        _supabaseUrl = config["Supabase:Url"] ?? string.Empty;
+        _bucketName = config["Supabase:FrameBucketName"] ?? "frame";
     }
 
     [HttpGet("playlist")]
@@ -51,18 +57,21 @@ public class FrameController : ControllerBase
         }
 
         var fileName = $"frame_{Guid.NewGuid():N}{extension}";
-        var filePath = _playlistService.GetImagePath(fileName);
+        var storagePath = $"frame/{fileName}";
 
-        await using (var stream = System.IO.File.Create(filePath))
-        {
-            await image.CopyToAsync(stream);
-        }
+        await using var memoryStream = new MemoryStream();
+        await image.CopyToAsync(memoryStream);
+        var imageBytes = memoryStream.ToArray();
+
+        await _supabase.Storage
+            .From(_bucketName)
+            .Upload(imageBytes, storagePath, new Supabase.Storage.FileOptions { Upsert = true });
 
         var playlist = await _playlistService.LoadAsync();
         var nextOrder = playlist.Items.Count == 0 ? 1 : playlist.Items.Max(item => item.Order) + 1;
         playlist.Items.Add(new FramePlaylistItem
         {
-            FileName = fileName,
+            FileName = storagePath,
             OriginalFileName = image.FileName,
             Order = nextOrder,
             Version = 1
@@ -115,10 +124,23 @@ public class FrameController : ControllerBase
         }
 
         playlist.Items.Remove(target);
-        var filePath = _playlistService.GetImagePath(target.FileName);
-        if (System.IO.File.Exists(filePath))
+        if (!string.IsNullOrWhiteSpace(target.FileName) &&
+            !target.FileName.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
-            System.IO.File.Delete(filePath);
+            if (target.FileName.Contains('/'))
+            {
+                await _supabase.Storage
+                    .From(_bucketName)
+                    .Remove(new List<string> { target.FileName.TrimStart('/') });
+            }
+            else
+            {
+                var filePath = _playlistService.GetImagePath(target.FileName);
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
         }
 
         playlist.Version += 1;
@@ -186,7 +208,23 @@ public class FrameController : ControllerBase
 
     private string BuildImageUrl(string fileName)
     {
-        var safeName = Path.GetFileName(fileName);
-        return Url.Action(nameof(GetImage), new { fileName = safeName }) ?? $"/api/frame/images/{safeName}";
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return string.Empty;
+        }
+
+        if (fileName.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            return fileName;
+        }
+
+        if (!fileName.Contains('/'))
+        {
+            var safeName = Path.GetFileName(fileName);
+            return Url.Action(nameof(GetImage), new { fileName = safeName }) ?? $"/api/frame/images/{safeName}";
+        }
+
+        var safePath = fileName.TrimStart('/');
+        return $"{_supabaseUrl}/storage/v1/object/public/{_bucketName}/{safePath}";
     }
 }
