@@ -190,8 +190,8 @@ const FrameManagement: React.FC = () => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
     return Array.from({ length: layoutConfig.cols * layoutConfig.rows }, (_, index) => ({
-      index: index + 1,
-      url: `${baseUrl}/frame/frame.html?cols=${layoutConfig.cols}&rows=${layoutConfig.rows}&index=${index + 1}`,
+      panelNumber: index + 1,
+      url: `${baseUrl}/frame/frame.html?cols=${layoutConfig.cols}&rows=${layoutConfig.rows}&index=${index}`,
     }));
   }, [layoutConfig.cols, layoutConfig.rows]);
 
@@ -233,7 +233,7 @@ const FrameManagement: React.FC = () => {
           >
             {panelLinks.map((panel) => (
               <a
-                key={panel.index}
+                key={panel.panelNumber}
                 href={panel.url}
                 target="_blank"
                 rel="noreferrer"
@@ -251,7 +251,7 @@ const FrameManagement: React.FC = () => {
                   Panel
                 </Text>
                 <Text style={{ fontSize: 24 }} strong>
-                  {panel.index}
+                  {panel.panelNumber}
                 </Text>
               </a>
             ))}
