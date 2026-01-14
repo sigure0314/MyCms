@@ -40,7 +40,7 @@ const FrameManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const layoutMode = Form.useWatch('layoutMode', form) ?? settings?.layoutMode ?? '3x3';
+  const [layoutMode, setLayoutMode] = useState('3x3');
 
   const fetchPlaylist = async () => {
     setLoading(true);
@@ -49,7 +49,9 @@ const FrameManagement: React.FC = () => {
       const sortedItems = [...response.data.items].sort((a, b) => a.order - b.order);
       setItems(sortedItems);
       setSettings(response.data.settings);
-      form.setFieldsValue({ layoutMode: response.data.settings.layoutMode });
+      const nextLayoutMode = response.data.settings.layoutMode ?? '3x3';
+      setLayoutMode(nextLayoutMode);
+      form.setFieldsValue({ layoutMode: nextLayoutMode });
       setDirty(false);
     } catch (error) {
       message.error('取得播放清單失敗');
@@ -206,7 +208,12 @@ const FrameManagement: React.FC = () => {
           form={form}
           layout="vertical"
           initialValues={{ layoutMode: settings?.layoutMode ?? '3x3' }}
-          onValuesChange={() => setDirty(true)}
+          onValuesChange={(changedValues) => {
+            setDirty(true);
+            if (changedValues.layoutMode) {
+              setLayoutMode(changedValues.layoutMode);
+            }
+          }}
         >
           <Form.Item label="播放模式" name="layoutMode">
             <Select options={layoutOptions} />
