@@ -186,13 +186,14 @@ const FrameManagement: React.FC = () => {
     return { cols: 3, rows: 3 };
   }, [layoutMode]);
 
-  const panelLinks = useMemo(
-    () => Array.from({ length: layoutConfig.cols * layoutConfig.rows }, (_, index) => ({
+  const panelLinks = useMemo(() => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
+    return Array.from({ length: layoutConfig.cols * layoutConfig.rows }, (_, index) => ({
       index: index + 1,
-      url: `http://網址/frame/frame.html?cols=${layoutConfig.cols}&rows=${layoutConfig.rows}&index=${index + 1}`,
-    })),
-    [layoutConfig.cols, layoutConfig.rows],
-  );
+      url: `${baseUrl}/frame/frame.html?cols=${layoutConfig.cols}&rows=${layoutConfig.rows}&index=${index + 1}`,
+    }));
+  }, [layoutConfig.cols, layoutConfig.rows]);
 
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
