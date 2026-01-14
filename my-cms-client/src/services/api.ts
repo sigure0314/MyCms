@@ -87,6 +87,39 @@ export interface UpdateMenuItemRequest {
   category: string;
 }
 
+export interface FramePlaylistSettings {
+  layoutMode: string;
+  intervalMs: number;
+  transitionMs: number;
+  cacheBustMode: string;
+  startAtEpochMs: number;
+  version: number;
+}
+
+export interface FramePlaylistItem {
+  id: string;
+  fileName: string;
+  originalFileName: string;
+  order: number;
+  version: number;
+  imageUrl: string;
+}
+
+export interface FramePlaylistAdminResponse {
+  settings: FramePlaylistSettings;
+  items: FramePlaylistItem[];
+}
+
+export interface FramePlaylistItemOrder {
+  id: string;
+  order: number;
+}
+
+export interface FramePlaylistUpdateRequest {
+  layoutMode: string;
+  items: FramePlaylistItemOrder[];
+}
+
 // 2. 設定 Base URL
 // 建議：正式開發時將 URL 放到 .env 檔案 (例如 import.meta.env.VITE_API_URL)
 // 目前先維持你原本的設定
@@ -208,6 +241,20 @@ const api = {
   },
   deleteMenuItem: (id: number) => {
     return axiosInstance.delete(`/menu/${id}`);
+  },
+  getFramePlaylistAdmin: () => {
+    return axiosInstance.get<FramePlaylistAdminResponse>('/frame/admin');
+  },
+  updateFramePlaylist: (data: FramePlaylistUpdateRequest) => {
+    return axiosInstance.put<FramePlaylistAdminResponse>('/frame/playlist', data);
+  },
+  uploadFrameImage: (data: FormData) => {
+    return axiosInstance.post<FramePlaylistAdminResponse>('/frame/images', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteFrameItem: (id: string) => {
+    return axiosInstance.delete<FramePlaylistAdminResponse>(`/frame/items/${id}`);
   }
 };
 

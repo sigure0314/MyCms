@@ -1,0 +1,192 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using MyCMS.API.DTOs;
+using MyCMS.API.Models;
+using MyCMS.API.Services;
+
+namespace MyCMS.API.Controllers;
+
+[ApiController]
+[Route("api/frame")]
+public class FrameController : ControllerBase
+{
+    private readonly FramePlaylistService _playlistService;
+
+    public FrameController(FramePlaylistService playlistService)
+    {
+        _playlistService = playlistService;
+    }
+
+    [HttpGet("playlist")]
+    [AllowAnonymous]
+    public async Task<ActionResult<FramePlaylistPlaybackResponse>> GetPlaylist()
+    {
+        var playlist = await _playlistService.LoadAsync();
+        var response = BuildPlaybackResponse(playlist);
+        return Ok(response);
+    }
+
+    [HttpGet("admin")]
+    [Authorize(Policy = "Permission:api.frame.get")]
+    public async Task<ActionResult<FramePlaylistAdminResponse>> GetAdminPlaylist()
+    {
+        var playlist = await _playlistService.LoadAsync();
+        var response = BuildAdminResponse(playlist);
+        return Ok(response);
+    }
+
+    [HttpPost("images")]
+    [Authorize(Policy = "Permission:api.frame.update")]
+    public async Task<ActionResult<FramePlaylistAdminResponse>> UploadImage([FromForm] IFormFile image)
+    {
+        if (image == null || image.Length == 0)
+        {
+            return BadRequest("Image file is required.");
+        }
+
+        var extension = Path.GetExtension(image.FileName);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = ".jpg";
+        }
+
+        var fileName = $"frame_{Guid.NewGuid():N}{extension}";
+        var filePath = _playlistService.GetImagePath(fileName);
+
+        await using (var stream = System.IO.File.Create(filePath))
+        {
+            await image.CopyToAsync(stream);
+        }
+
+        var playlist = await _playlistService.LoadAsync();
+        var nextOrder = playlist.Items.Count == 0 ? 1 : playlist.Items.Max(item => item.Order) + 1;
+        playlist.Items.Add(new FramePlaylistItem
+        {
+            FileName = fileName,
+            OriginalFileName = image.FileName,
+            Order = nextOrder,
+            Version = 1
+        });
+        playlist.Version += 1;
+        playlist.StartAtEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        await _playlistService.SaveAsync(playlist);
+        return Ok(BuildAdminResponse(playlist));
+    }
+
+    [HttpPut("playlist")]
+    [Authorize(Policy = "Permission:api.frame.update")]
+    public async Task<ActionResult<FramePlaylistAdminResponse>> UpdatePlaylist([FromBody] FramePlaylistUpdateRequest request)
+    {
+        var playlist = await _playlistService.LoadAsync();
+        playlist.LayoutMode = request.LayoutMode;
+
+        if (request.Items != null && request.Items.Count > 0)
+        {
+            var orderLookup = request.Items
+                .GroupBy(item => item.Id)
+                .ToDictionary(group => group.Key, group => group.First().Order);
+
+            foreach (var item in playlist.Items)
+            {
+                if (orderLookup.TryGetValue(item.Id, out var order))
+                {
+                    item.Order = order;
+                }
+            }
+        }
+
+        playlist.Version += 1;
+        playlist.StartAtEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        await _playlistService.SaveAsync(playlist);
+        return Ok(BuildAdminResponse(playlist));
+    }
+
+    [HttpDelete("items/{id}")]
+    [Authorize(Policy = "Permission:api.frame.update")]
+    public async Task<ActionResult<FramePlaylistAdminResponse>> DeleteItem(string id)
+    {
+        var playlist = await _playlistService.LoadAsync();
+        var target = playlist.Items.FirstOrDefault(item => item.Id == id);
+        if (target == null)
+        {
+            return NotFound();
+        }
+
+        playlist.Items.Remove(target);
+        var filePath = _playlistService.GetImagePath(target.FileName);
+        if (System.IO.File.Exists(filePath))
+        {
+            System.IO.File.Delete(filePath);
+        }
+
+        playlist.Version += 1;
+        playlist.StartAtEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        await _playlistService.SaveAsync(playlist);
+        return Ok(BuildAdminResponse(playlist));
+    }
+
+    [HttpGet("images/{fileName}")]
+    [AllowAnonymous]
+    public IActionResult GetImage(string fileName)
+    {
+        var safeName = Path.GetFileName(fileName);
+        var filePath = _playlistService.GetImagePath(safeName);
+        if (!System.IO.File.Exists(filePath))
+        {
+            return NotFound();
+        }
+
+        var contentType = "application/octet-stream";
+        return PhysicalFile(filePath, contentType);
+    }
+
+    private FramePlaylistAdminResponse BuildAdminResponse(FramePlaylist playlist)
+    {
+        var items = playlist.Items
+            .OrderBy(item => item.Order)
+            .Select(item => new FramePlaylistItemResponse(
+                item.Id,
+                item.FileName,
+                item.OriginalFileName,
+                item.Order,
+                item.Version,
+                BuildImageUrl(item.FileName)))
+            .ToList();
+
+        var settings = new FramePlaylistSettingsResponse(
+            playlist.LayoutMode,
+            playlist.IntervalMs,
+            playlist.TransitionMs,
+            playlist.CacheBustMode,
+            playlist.StartAtEpochMs,
+            playlist.Version);
+
+        return new FramePlaylistAdminResponse(settings, items);
+    }
+
+    private FramePlaylistPlaybackResponse BuildPlaybackResponse(FramePlaylist playlist)
+    {
+        var items = playlist.Items
+            .OrderBy(item => item.Order)
+            .Select(item => new FramePlaylistPlaybackItem(BuildImageUrl(item.FileName), item.Version))
+            .ToList();
+
+        return new FramePlaylistPlaybackResponse(
+            playlist.Version,
+            playlist.IntervalMs,
+            playlist.TransitionMs,
+            playlist.CacheBustMode,
+            playlist.StartAtEpochMs,
+            playlist.LayoutMode,
+            items);
+    }
+
+    private string BuildImageUrl(string fileName)
+    {
+        var safeName = Path.GetFileName(fileName);
+        return Url.Action(nameof(GetImage), new { fileName = safeName }) ?? $"/api/frame/images/{safeName}";
+    }
+}

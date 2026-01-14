@@ -17,6 +17,7 @@ import {
   InstagramOutlined,
   SettingOutlined,
   ShopOutlined,
+  PictureOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 
@@ -100,6 +101,11 @@ const MainLayout: React.FC = () => {
           label: '童書播放' 
         },
       ],
+    },
+    {
+      key: '/frame',
+      icon: <PictureOutlined />,
+      label: '電子看板',
     },
     {
       key: 'sub-pos-kitchen',

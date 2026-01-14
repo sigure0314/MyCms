@@ -27,6 +27,7 @@ import StoryTeller from './pages/player/StoryTeller';
 import PersonalSettings from './pages/PersonalSettings';
 import PosAsyncKitchen from './pages/PosAsyncKitchen';
 import MenuManagement from './pages/pos/MenuManagement';
+import FrameManagement from './pages/frame/FrameManagement';
 
 const App = () => (
   <BrowserRouter>
@@ -105,6 +106,11 @@ const App = () => (
           <Route
             path="/pos/menu"
             element={<PermissionRoute path="/pos/menu" element={<MenuManagement />} />}
+          />
+
+          <Route
+            path="/frame"
+            element={<PermissionRoute path="/frame" element={<FrameManagement />} />}
           />
 
           {/* 注意：因為 generate 和 player 頁面還沒做，

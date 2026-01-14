@@ -42,8 +42,10 @@
   <script>
     // ====== 參數 ======
     const p = new URLSearchParams(location.search);
-    const cols  = Math.max(1, Number(p.get("cols") || 3));
-    const rows  = Math.max(1, Number(p.get("rows") || 1));
+    const modeParam = (p.get("mode") || "").toLowerCase();
+    const hasLayoutOverride = p.has("cols") || p.has("rows") || p.has("mode");
+    let cols  = Math.max(1, Number(p.get("cols") || 3));
+    let rows  = Math.max(1, Number(p.get("rows") || 1));
     const index = Math.max(0, Number(p.get("index") || 0));
 
     // offset 校正（px）：用於拼接縫/壁掛不齊
@@ -54,7 +56,7 @@
     const fit = (p.get("fit") || "cover").toLowerCase(); // cover | contain
 
     // 播放清單來源：你可以改成 /frame/playlist（ASP.NET Core API）
-    const PLAYLIST_URL = p.get("playlist") || "./playlist.json";
+    const PLAYLIST_URL = p.get("playlist") || "/api/frame/playlist";
 
     // ====== DOM ======
     const layerA = document.getElementById("a");
@@ -62,11 +64,32 @@
     const msg = document.getElementById("msg");
 
     // ====== 位置計算（同一份支援 3x3 / 1x3）======
-    const col = index % cols;
-    const row = Math.floor(index / cols);
+    let col = 0;
+    let row = 0;
+    let x = 50;
+    let y = 50;
 
-    const x = (cols === 1) ? 50 : (col / (cols - 1)) * 100;
-    const y = (rows === 1) ? 50 : (row / (rows - 1)) * 100;
+    function resolveLayoutFromMode(mode) {
+      const normalized = (mode || "").toLowerCase();
+      if (normalized === "1x3" || normalized === "gallery") return { cols: 3, rows: 1 };
+      if (normalized === "3x3" || normalized === "mall") return { cols: 3, rows: 3 };
+      return null;
+    }
+
+    function updatePosition() {
+      col = index % cols;
+      row = Math.floor(index / cols);
+      x = (cols === 1) ? 50 : (col / (cols - 1)) * 100;
+      y = (rows === 1) ? 50 : (row / (rows - 1)) * 100;
+    }
+
+    function applyLayout(nextCols, nextRows) {
+      cols = Math.max(1, Number(nextCols || cols));
+      rows = Math.max(1, Number(nextRows || rows));
+      updatePosition();
+      applyTransform(layerA);
+      applyTransform(layerB);
+    }
 
     function applyTransform(layer) {
       layer.style.backgroundSize = `${cols * 100}% ${rows * 100}%`;  // 3x3 => 300% 300%, 1x3 => 300% 100%
@@ -85,8 +108,14 @@
       // 這裡保留參數只是方便你之後擴充用。
     }
 
-    applyTransform(layerA);
-    applyTransform(layerB);
+    const fallbackLayout = resolveLayoutFromMode(modeParam);
+    if (fallbackLayout) {
+      applyLayout(fallbackLayout.cols, fallbackLayout.rows);
+    } else {
+      updatePosition();
+      applyTransform(layerA);
+      applyTransform(layerB);
+    }
 
     // offset 校正：用 translate 把「視窗」移動一點點
     // 注意：ox/oy 是針對該螢幕的微調
@@ -116,6 +145,15 @@
       intervalMs = Number(data.intervalMs || intervalMs);
       transitionMs = Number(data.transitionMs || transitionMs);
       cacheBustMode = (data.cacheBustMode || cacheBustMode);
+
+      if (!hasLayoutOverride) {
+        const layout = resolveLayoutFromMode(data.layoutMode) || resolveLayoutFromMode(data.layout?.mode);
+        if (layout) {
+          applyLayout(layout.cols, layout.rows);
+        } else if (data.layout?.cols && data.layout?.rows) {
+          applyLayout(data.layout.cols, data.layout.rows);
+        }
+      }
 
       // 建議：後端提供固定 startAtEpochMs，9 面/3 面才會「永遠同秒切」
       startAtEpochMs = Number(data.startAtEpochMs || 0);
