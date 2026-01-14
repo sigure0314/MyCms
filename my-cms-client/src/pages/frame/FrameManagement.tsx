@@ -40,6 +40,7 @@ const FrameManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const layoutMode = Form.useWatch('layoutMode', form) ?? settings?.layoutMode ?? '3x3';
 
   const fetchPlaylist = async () => {
     setLoading(true);
@@ -175,6 +176,22 @@ const FrameManagement: React.FC = () => {
     },
   ], [items]);
 
+  const layoutConfig = useMemo(() => {
+    if (layoutMode === '1x3') {
+      return { cols: 3, rows: 1 };
+    }
+
+    return { cols: 3, rows: 3 };
+  }, [layoutMode]);
+
+  const panelLinks = useMemo(
+    () => Array.from({ length: layoutConfig.cols * layoutConfig.rows }, (_, index) => ({
+      index: index + 1,
+      url: `http://網址/frame/frame.html?cols=${layoutConfig.cols}&rows=${layoutConfig.rows}&index=${index + 1}`,
+    })),
+    [layoutConfig.cols, layoutConfig.rows],
+  );
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
       <Card
@@ -195,6 +212,43 @@ const FrameManagement: React.FC = () => {
             <Select options={layoutOptions} />
           </Form.Item>
         </Form>
+
+        <div>
+          <Text strong>面板預覽 (點擊開啟)</Text>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${layoutConfig.cols}, minmax(0, 1fr))`,
+              gap: 16,
+              marginTop: 12,
+            }}
+          >
+            {panelLinks.map((panel) => (
+              <a
+                key={panel.index}
+                href={panel.url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  border: '1px solid #d9d9d9',
+                  borderRadius: 12,
+                  padding: 16,
+                  textAlign: 'center',
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  backgroundColor: '#fafafa',
+                }}
+              >
+                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                  Panel
+                </Text>
+                <Text style={{ fontSize: 24 }} strong>
+                  {panel.index}
+                </Text>
+              </a>
+            ))}
+          </div>
+        </div>
       </Card>
 
       <Card
