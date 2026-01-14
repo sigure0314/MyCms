@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "intervalMs": 15000,
+  "transitionMs": 1200,
+  "cacheBustMode": "v",
+  "startAtEpochMs": 1736812800000,
+  "items": [
+    { "url": "/frame/img/p001.jpg", "version": 1 },
+    { "url": "/frame/img/p002.jpg", "version": 1 },
+    { "url": "/frame/img/p003.jpg", "version": 1 },
+    { "url": "/frame/img/p004.jpg", "version": 1 },
+    { "url": "/frame/img/p005.jpg", "version": 1 },
+    { "url": "/frame/img/p006.jpg", "version": 1 },
+    { "url": "/frame/img/p007.jpg", "version": 1 },
+    { "url": "/frame/img/p008.jpg", "version": 1 },
+    { "url": "/frame/img/p009.jpg", "version": 1 },
+    { "url": "/frame/img/p010.jpg", "version": 1 }
+  ]
+}

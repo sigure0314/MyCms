@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no" />
+  <title>Wall Frame</title>
+  <style>
+    html, body {
+      margin: 0; width: 100%; height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
+
+    /* 兩層交替淡入淡出，避免換圖閃爍 */
+    .layer {
+      position: fixed;
+      inset: 0;
+      background-repeat: no-repeat;
+      opacity: 0;
+      transition: opacity 1200ms linear;
+      will-change: opacity;
+      transform: translateZ(0); /* 提升長時間播放穩定度 */
+    }
+    .layer.show { opacity: 1; }
+
+    /* 可選：斷線/錯誤時提示（正常播放會看不到） */
+    #msg {
+      position: fixed; left: 16px; bottom: 12px;
+      color: rgba(255,255,255,0.6);
+      font: 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans TC", sans-serif;
+      white-space: pre;
+      pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="a" class="layer show"></div>
+  <div id="b" class="layer"></div>
+  <div id="msg"></div>
+
+  <script>
+    // ====== 參數 ======
+    const p = new URLSearchParams(location.search);
+    const cols  = Math.max(1, Number(p.get("cols") || 3));
+    const rows  = Math.max(1, Number(p.get("rows") || 1));
+    const index = Math.max(0, Number(p.get("index") || 0));
+
+    // offset 校正（px）：用於拼接縫/壁掛不齊
+    const ox = Number(p.get("ox") || 0);
+    const oy = Number(p.get("oy") || 0);
+
+    // 可選：同時支援「cover」(滿版裁切) 或「contain」(完整顯示留黑邊)
+    const fit = (p.get("fit") || "cover").toLowerCase(); // cover | contain
+
+    // 播放清單來源：你可以改成 /frame/playlist（ASP.NET Core API）
+    const PLAYLIST_URL = p.get("playlist") || "./playlist.json";
+
+    // ====== DOM ======
+    const layerA = document.getElementById("a");
+    const layerB = document.getElementById("b");
+    const msg = document.getElementById("msg");
+
+    // ====== 位置計算（同一份支援 3x3 / 1x3）======
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+
+    const x = (cols === 1) ? 50 : (col / (cols - 1)) * 100;
+    const y = (rows === 1) ? 50 : (row / (rows - 1)) * 100;
+
+    function applyTransform(layer) {
+      layer.style.backgroundSize = `${cols * 100}% ${rows * 100}%`;  // 3x3 => 300% 300%, 1x3 => 300% 100%
+      layer.style.backgroundPosition = `${x}% ${y}%`;
+      layer.style.backgroundAttachment = "fixed";
+
+      // 這裡用 background-origin/clip 讓邊界較一致（有些瀏覽器拼接比較順）
+      layer.style.backgroundOrigin = "border-box";
+      layer.style.backgroundClip = "border-box";
+
+      // 依 fit 模式調整
+      // cover/contain 在 background-image 上沒直接屬性，通常用 background-size cover/contain
+      // 但我們已用背景縮放做「切片」，不能直接 cover/contain。
+      // 所以 fit=contain 時，我們改用「不裁切」策略：讓圖符合大畫布比例由內容準備為主。
+      // 實務上：電子畫框拼接幾乎都用 cover 觀感最好。
+      // 這裡保留參數只是方便你之後擴充用。
+    }
+
+    applyTransform(layerA);
+    applyTransform(layerB);
+
+    // offset 校正：用 translate 把「視窗」移動一點點
+    // 注意：ox/oy 是針對該螢幕的微調
+    layerA.style.transform = `translate(${ox}px, ${oy}px) translateZ(0)`;
+    layerB.style.transform = `translate(${ox}px, ${oy}px) translateZ(0)`;
+
+    // ====== 播放清單 / 輪播（同步切換）======
+    let items = [];
+    let intervalMs = 15000;     // 每張停留時間
+    let transitionMs = 1200;    // 淡入淡出時間
+    let startAtEpochMs = 0;     // 同步基準（毫秒時間戳）
+    let cacheBustMode = "v";    // v: 用版本號；t: 用時間戳；none: 不加
+
+    // 同步策略：
+    // - 若 playlist 有 startAtEpochMs：所有螢幕以它為基準「算出目前該播第幾張」
+    // - 若沒有：本機載到 playlist 的時間當基準（仍可做到同一個 moment 開始播放）
+    function nowMs() { return Date.now(); }
+
+    function setMsg(s) { msg.textContent = s || ""; }
+
+    async function fetchPlaylist() {
+      const r = await fetch(PLAYLIST_URL, { cache: "no-store" });
+      if (!r.ok) throw new Error("playlist fetch failed: " + r.status);
+      const data = await r.json();
+
+      items = Array.isArray(data.items) ? data.items : [];
+      intervalMs = Number(data.intervalMs || intervalMs);
+      transitionMs = Number(data.transitionMs || transitionMs);
+      cacheBustMode = (data.cacheBustMode || cacheBustMode);
+
+      // 建議：後端提供固定 startAtEpochMs，9 面/3 面才會「永遠同秒切」
+      startAtEpochMs = Number(data.startAtEpochMs || 0);
+      if (!startAtEpochMs) startAtEpochMs = nowMs(); // 沒提供就用當下作為起點
+
+      // 套用 transition 時間
+      layerA.style.transitionDuration = transitionMs + "ms";
+      layerB.style.transitionDuration = transitionMs + "ms";
+
+      return data;
+    }
+
+    function buildUrl(url, version) {
+      if (!url) return url;
+      if (cacheBustMode === "none") return url;
+
+      const sep = url.includes("?") ? "&" : "?";
+      if (cacheBustMode === "t") return url + sep + "t=" + nowMs();
+      // default: v
+      return url + sep + "v=" + encodeURIComponent(String(version || 1));
+    }
+
+    function preload(url) {
+      return new Promise((res, rej) => {
+        const img = new Image();
+        img.onload = () => res();
+        img.onerror = () => rej(new Error("image preload failed: " + url));
+        img.src = url;
+      });
+    }
+
+    // 依同步基準算出「此刻該播第幾張」
+    function calcIndexAtTime(ms) {
+      if (!items.length) return 0;
+      const elapsed = Math.max(0, ms - startAtEpochMs);
+      const slot = Math.floor(elapsed / intervalMs);
+      return slot % items.length;
+    }
+
+    function msUntilNextBoundary(ms) {
+      const elapsed = Math.max(0, ms - startAtEpochMs);
+      const next = (Math.floor(elapsed / intervalMs) + 1) * intervalMs;
+      return next - elapsed;
+    }
+
+    let showingA = true;
+    let currentIdx = 0;
+    let playlistVersion = 1; // 用於 cache bust（可由 playlist 提供 version）
+
+    async function showIndex(targetIdx, immediate=false) {
+      if (!items.length) return;
+
+      const item = items[targetIdx];
+      const url = buildUrl(item.url, item.version ?? playlistVersion);
+
+      // 預載避免閃
+      await preload(url);
+
+      const showLayer = showingA ? layerB : layerA;
+      const hideLayer = showingA ? layerA : layerB;
+
+      showLayer.style.backgroundImage = `url("${url}")`;
+
+      if (immediate) {
+        // 第一次直接顯示
+        showLayer.classList.add("show");
+        hideLayer.classList.remove("show");
+      } else {
+        showLayer.classList.add("show");
+        hideLayer.classList.remove("show");
+      }
+
+      showingA = !showingA;
+      currentIdx = targetIdx;
+    }
+
+    async function tick() {
+      const ms = nowMs();
+      const idx = calcIndexAtTime(ms);
+
+      // 若已顯示的是同一張，就不重刷（避免抖動）
+      if (idx !== currentIdx) {
+        try {
+          await showIndex(idx);
+        } catch (e) {
+          setMsg("圖片載入失敗\n" + (e?.message || e));
+        }
+      }
+
+      // 排程到下一個邊界點（確保所有螢幕同秒切）
+      const wait = msUntilNextBoundary(ms);
+      setTimeout(tick, wait);
+    }
+
+    // 定期重抓 playlist（你在後台換 10 張照片、改順序、改秒數，就能生效）
+    async function refreshLoop() {
+      try {
+        const data = await fetchPlaylist();
+        if (data?.version) playlistVersion = data.version;
+
+        // 第一次：立即顯示「同步時刻應該顯示的那一張」
+        const ms = nowMs();
+        const idx = calcIndexAtTime(ms);
+        await showIndex(idx, true);
+
+        // 然後開始同步 tick
+        setTimeout(tick, msUntilNextBoundary(ms));
+      } catch (e) {
+        setMsg("播放清單讀取失敗\n" + (e?.message || e));
+        // 10 秒後重試
+        setTimeout(refreshLoop, 10000);
+        return;
+      }
+
+      // 每 60 秒重抓一次 playlist（可自行調）
+      setTimeout(refreshLoop, 60000);
+    }
+
+    // 啟動
+    setMsg(`mode: ${cols}x${rows}  index:${index}  offset:${ox},${oy}`);
+    refreshLoop();
+  </script>
+</body>
+</html>
