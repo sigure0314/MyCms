@@ -87,6 +87,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
 //app.UseCors("AllowReact");
+app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseCors("AllowConfiguredOrigins");
 app.UseAuthentication();
@@ -94,4 +95,5 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<StoryHub>("/storyHub");
 app.MapHub<OrdersHub>("/hubs/orders");
+app.MapFallbackToFile("index.html");
 app.Run();
