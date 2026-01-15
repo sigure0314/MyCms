@@ -133,8 +133,7 @@ const PosOrderPage = () => {
   useEffect(() => {
     const fetchMenu = async () => {
       try {
-        const response = await fetch(buildApiUrl('/orders/menu'));
-        const data = await parseJsonResponse<MenuItem[]>(response, 'Menu fetch failed');
+        const { data } = await api.get<MenuItem[]>('/orders/menu');
         setMenu(data);
       } catch (error) {
         console.warn('POS menu fetch failed.', error);
