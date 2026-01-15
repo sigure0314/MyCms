@@ -46,8 +46,6 @@ const fallbackOrders: Order[] = [
   },
 ];
 
-const buildApiUrl = (path: string) => (path.startsWith('/') ? `${API_BASE_URL}${path}` : `${API_BASE_URL}/${path}`);
-
 const getHubUrl = () => {
   const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
   return `${base}/hubs/orders`;
@@ -68,29 +66,6 @@ const loadFallbackOrders = (): Order[] => {
 
 const saveFallbackOrders = (orders: Order[]) => {
   localStorage.setItem(FALLBACK_STORAGE_KEY, JSON.stringify(orders));
-};
-
-const parseJsonResponse = async <T,>(response: Response, errorMessage: string): Promise<T> => {
-  if (!response.ok) {
-    throw new Error(errorMessage);
-  }
-
-  const contentType = response.headers.get('content-type');
-  const bodyText = await response.text();
-  const trimmed = bodyText.trim();
-  const looksLikeJson = trimmed.startsWith('{') || trimmed.startsWith('[');
-
-  if (!contentType || !contentType.includes('application/json')) {
-    if (!looksLikeJson) {
-      throw new Error(`${errorMessage}: Expected JSON but received ${contentType ?? 'unknown content type'}`);
-    }
-  }
-
-  try {
-    return JSON.parse(bodyText) as T;
-  } catch (error) {
-    throw new Error(`${errorMessage}: Failed to parse JSON response`, { cause: error });
-  }
 };
 
 const sortOrdersByCreatedAt = (orders: Order[]) =>
@@ -147,8 +122,7 @@ const PosOrderPage = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch(buildApiUrl('/orders'));
-        const data = await parseJsonResponse<Order[]>(response, 'Order fetch failed');
+        const { data } = await api.get<Order[]>('/orders');
         setOrders(sortOrdersByCreatedAt(data));
         setOrdersOffline(false);
       } catch (error) {
@@ -251,13 +225,7 @@ const PosOrderPage = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(buildApiUrl('/orders'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
-      });
-
-      const created = await parseJsonResponse<Order>(response, 'Create order failed');
+      const { data: created } = await api.post<Order>('/orders', request);
       setOrders((prev) => sortOrdersByCreatedAt([...prev, created]));
 
       setCart({});
@@ -433,8 +401,7 @@ const KitchenBoard = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch(buildApiUrl('/orders'));
-        const data = await parseJsonResponse<Order[]>(response, 'Order fetch failed');
+        const { data } = await api.get<Order[]>('/orders');
         setOrders(data);
         setUseFallback(false);
       } catch (error) {
@@ -503,14 +470,7 @@ const KitchenBoard = () => {
     }
 
     try {
-      const response = await fetch(buildApiUrl(`/orders/${id}/status`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) {
-        throw new Error('Status update failed');
-      }
+      await api.put(`/orders/${id}/status`, { status });
     } catch (error) {
       console.warn('Status update failed, using local update.', error);
       setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));
