@@ -43,8 +43,10 @@ public class FrameController : ControllerBase
 
     [HttpPost("images")]
     [Authorize(Policy = "Permission:api.frame.update")]
-    public async Task<ActionResult<FramePlaylistAdminResponse>> UploadImage([FromForm] IFormFile image)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<FramePlaylistAdminResponse>> UploadImage([FromForm] FramePlaylistImageUploadRequest request)
     {
+        var image = request.Image;
         if (image == null || image.Length == 0)
         {
             return BadRequest("Image file is required.");
