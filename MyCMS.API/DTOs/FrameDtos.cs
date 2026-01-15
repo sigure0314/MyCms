@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace MyCMS.API.DTOs;
 
 public record FramePlaylistAdminResponse(FramePlaylistSettingsResponse Settings, IReadOnlyList<FramePlaylistItemResponse> Items);
@@ -21,6 +23,11 @@ public record FramePlaylistItemResponse(
 public record FramePlaylistUpdateRequest(string LayoutMode, IReadOnlyList<FramePlaylistItemOrderRequest> Items);
 
 public record FramePlaylistItemOrderRequest(string Id, int Order);
+
+public class FramePlaylistImageUploadRequest
+{
+    public IFormFile? Image { get; set; }
+}
 
 public record FramePlaylistPlaybackResponse(
     int Version,
