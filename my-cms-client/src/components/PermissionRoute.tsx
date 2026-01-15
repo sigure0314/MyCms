@@ -7,7 +7,19 @@ interface PermissionRouteProps {
   element: ReactElement;
 }
 
-const PermissionRoute = ({ path, element }: PermissionRouteProps) =>
-  authService.hasPermission(path) ? element : <Navigate to="/dashboard" replace />;
+const PermissionRoute = ({ path, element }: PermissionRouteProps) => {
+  if (authService.hasPermission(path)) {
+    return element;
+  }
+
+  const storedRoutes = authService.getPermissionRoutes();
+  const fallbackPath = storedRoutes.find(route => typeof route === 'string' && route.length > 0) ?? '/settings';
+
+  if (fallbackPath === path) {
+    return <Navigate to="/settings" replace />;
+  }
+
+  return <Navigate to={fallbackPath} replace />;
+};
 
 export default PermissionRoute;
