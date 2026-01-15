@@ -35,11 +35,13 @@ const App = () => (
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/pos-async-kitchen/*" element={<PosAsyncKitchen />} />
-      
       <Route element={<ProtectedRoute />}>
-          <Route path="/player/read/:id" element={<PersonalReader />} />
-          <Route path="/player/story/:id" element={<StoryTeller />} />
+        <Route
+          path="/pos-async-kitchen/*"
+          element={<PermissionRoute path="/pos-async-kitchen" element={<PosAsyncKitchen />} />}
+        />
+        <Route path="/player/read/:id" element={<PersonalReader />} />
+        <Route path="/player/story/:id" element={<StoryTeller />} />
         <Route element={<MainLayout />}>
           <Route
             path="/settings"
