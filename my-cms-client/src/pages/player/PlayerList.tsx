@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { Card, List, Button, Typography, message } from 'antd';
+import { useEffect, useState } from 'react';
+import type { FC } from 'react';
+import { Card, List, Button, Typography } from 'antd';
 import { PlayCircleOutlined, ReadOutlined } from '@ant-design/icons';
 import api from '../../services/api';
 
-const PlayerList: React.FC = () => {
+const PlayerList: FC = () => {
   const [books, setBooks] = useState<any[]>([]);
 
   useEffect(() => {
