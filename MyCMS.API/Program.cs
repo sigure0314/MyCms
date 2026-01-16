@@ -69,10 +69,21 @@ builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHand
 // 5. CORS (Allow Frontend)
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(opt => opt.AddPolicy("AllowConfiguredOrigins", policy =>
-    policy.WithOrigins(allowedOrigins)
+    policy.SetIsOriginAllowed(origin =>
+        {
+            // 明確允許清單
+            if (allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+                return true;
+
+            // 允許所有 Vercel 站台（含 Preview）
+            if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                return uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+
+            return false;
+        })
         .AllowAnyMethod()
         .AllowAnyHeader()
-      ));
+        .AllowCredentials()));
 
 
 builder.Services.AddHttpClient<IGeminiClient, GeminiClient>();
