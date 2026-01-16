@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, Button, Typography, Spin, Row, Col, Progress, message } from 'antd';
 import { LeftOutlined, RightOutlined, SoundOutlined, CloseOutlined } from '@ant-design/icons';

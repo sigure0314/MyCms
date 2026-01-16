@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FC } from 'react';
 import { Button, Card, Select, Space, Tree, message } from 'antd';
 import api from '../../../services/api';
 import type { Permission, Role } from '../../../services/api';
 
-const RolePermissions: React.FC = () => {
+const RolePermissions: FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
@@ -86,7 +87,7 @@ const RolePermissions: React.FC = () => {
     }));
 
   return (
-    <Card title="角色權限設定">
+    <Card title="角色權限設定" loading={loadingRoles || loadingPermissions}>
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Select
           placeholder="選擇角色"
@@ -105,7 +106,6 @@ const RolePermissions: React.FC = () => {
             }
           }}
           treeData={permissionTreeData}
-          loading={loadingPermissions}
         />
         <Button
           type="primary"

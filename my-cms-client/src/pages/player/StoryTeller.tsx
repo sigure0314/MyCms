@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { Button, Card, Spin, Typography, Row, Col, Modal, message } from 'antd';
 import { LeftOutlined, RightOutlined, RollbackOutlined, QrcodeOutlined, CopyOutlined } from '@ant-design/icons';
@@ -13,7 +13,6 @@ const { Title, Paragraph, Text } = Typography;
 export default function StoryTeller() {
   const { id } = useParams<{ id: string }>(); // Book ID
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   
   // 判斷模式
   const isController = searchParams.get('mode') === 'controller';
@@ -50,7 +49,7 @@ export default function StoryTeller() {
             found.pages.sort((a: any, b: any) => a.pageIndex - b.pageIndex);
             setBook(found);
         }
-    }).catch(err => {
+    }).catch(() => {
         message.error("讀取書籍失敗");
     });
   }, [id]);
