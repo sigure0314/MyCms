@@ -1,14 +1,9 @@
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react';
-=======
 import { useEffect, useState } from 'react';
-import type { FC } from 'react';
->>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
 import { Card, List, Button, Typography } from 'antd';
 import { PlayCircleOutlined, ReadOutlined } from '@ant-design/icons';
 import api from '../../services/api';
 
-const PlayerList: FC = () => {
+const PlayerList = () => {
   const [books, setBooks] = useState<any[]>([]);
 
   useEffect(() => {

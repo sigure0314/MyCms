@@ -65,11 +65,7 @@ const FrameManagement: FC = () => {
     fetchPlaylist();
   }, []);
 
-<<<<<<< HEAD
-  const handleUpload = async (options: any) => {
-=======
-  const handleUpload: NonNullable<UploadProps['customRequest']> = async (options) => {
->>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
+ const handleUpload = async (options: any) => {
     const formData = new FormData();
     formData.append('image', options.file as File);
 

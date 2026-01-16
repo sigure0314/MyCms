@@ -1,15 +1,9 @@
-<<<<<<< HEAD
-import React, { useEffect, useState } from 'react';
-import { Button, Card, Select, Space, Tree, message , Spin} from 'antd';
-=======
 import { useEffect, useState } from 'react';
-import type { FC } from 'react';
-import { Button, Card, Select, Space, Tree, message } from 'antd';
->>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
+import { Button, Card, Select, Space, Tree, message,Spin } from 'antd';
 import api from '../../../services/api';
 import type { Permission, Role } from '../../../services/api';
 
-const RolePermissions: FC = () => {
+const RolePermissions = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
@@ -102,7 +96,6 @@ const RolePermissions: FC = () => {
           onChange={handleSelectRole}
           loading={loadingRoles}
         />
-<<<<<<< HEAD
          <Spin spinning={loadingPermissions}>
           <Tree
             checkable
@@ -115,18 +108,6 @@ const RolePermissions: FC = () => {
             treeData={permissionTreeData}
           />
         </Spin>
-=======
-        <Tree
-          checkable
-          checkedKeys={rolePermissionIds}
-          onCheck={(checkedKeys) => {
-            if (Array.isArray(checkedKeys)) {
-              setRolePermissionIds(checkedKeys as number[]);
-            }
-          }}
-          treeData={permissionTreeData}
-        />
->>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
         <Button
           type="primary"
           onClick={handleSaveRolePermissions}
