@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { 
-  Card, Form, Input, Select, Button, Slider, InputNumber, 
-  Steps, Typography, Spin, Row, Col, Result, Divider, message 
+  Card, Form, Input, Select, Button, Slider, 
+  Steps, Typography, Spin, Row, Col, Result,  message 
 } from 'antd';
 import { 
   RobotOutlined, EditOutlined, PictureOutlined, 
-  RocketOutlined, CheckCircleOutlined 
+   CheckCircleOutlined 
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api'; // 匯入實體物件
 import type { GenerateScriptRequest, StoryDraft} from '../../services/api'; // 匯入型別
-const { Title, Text } = Typography; // Typography 只負責標題和文字顯示
+const {  Text } = Typography; // Typography 只負責標題和文字顯示
 const { TextArea } = Input;         // TextArea 負責輸入多行文字
 
 const StoryGenerator: React.FC = () => {

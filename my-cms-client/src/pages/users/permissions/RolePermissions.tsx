@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Select, Space, Tree, message } from 'antd';
+import { Button, Card, Select, Space, Tree, message , Spin} from 'antd';
 import api from '../../../services/api';
 import type { Permission, Role } from '../../../services/api';
 
@@ -96,17 +96,18 @@ const RolePermissions: React.FC = () => {
           onChange={handleSelectRole}
           loading={loadingRoles}
         />
-        <Tree
-          checkable
-          checkedKeys={rolePermissionIds}
-          onCheck={(checkedKeys) => {
-            if (Array.isArray(checkedKeys)) {
-              setRolePermissionIds(checkedKeys as number[]);
-            }
-          }}
-          treeData={permissionTreeData}
-          loading={loadingPermissions}
-        />
+         <Spin spinning={loadingPermissions}>
+          <Tree
+            checkable
+            checkedKeys={rolePermissionIds}
+            onCheck={(checkedKeys) => {
+              if (Array.isArray(checkedKeys)) {
+                setRolePermissionIds(checkedKeys as number[]);
+              }
+            }}
+            treeData={permissionTreeData}
+          />
+        </Spin>
         <Button
           type="primary"
           onClick={handleSaveRolePermissions}

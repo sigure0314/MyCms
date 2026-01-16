@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, List, Button, Typography, message } from 'antd';
+import { Card, List, Button, Typography } from 'antd';
 import { PlayCircleOutlined, ReadOutlined } from '@ant-design/icons';
 import api from '../../services/api';
 

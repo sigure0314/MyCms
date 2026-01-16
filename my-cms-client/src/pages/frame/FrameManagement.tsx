@@ -12,7 +12,6 @@ import {
   Upload,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
@@ -64,7 +63,7 @@ const FrameManagement: React.FC = () => {
     fetchPlaylist();
   }, []);
 
-  const handleUpload = async (options: UploadRequestOption) => {
+  const handleUpload = async (options: any) => {
     const formData = new FormData();
     formData.append('image', options.file as File);
 

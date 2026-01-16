@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Card, Image, Tag, Typography, Space } from 'antd';
+import { Table, Card, Image, Tag, Typography } from 'antd';
 import api from '../../services/api';
 
 const { Paragraph } = Typography;
