@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { FC } from 'react';
 import {
   Button,
   Card,
@@ -11,6 +12,7 @@ import {
   Typography,
   Upload,
 } from 'antd';
+import type { UploadProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ArrowDownOutlined,
@@ -32,7 +34,7 @@ const layoutOptions = [
   { label: '1x3 家庭畫廊', value: '1x3' },
 ];
 
-const FrameManagement: React.FC = () => {
+const FrameManagement: FC = () => {
   const [form] = Form.useForm();
   const [items, setItems] = useState<FramePlaylistItem[]>([]);
   const [settings, setSettings] = useState<FramePlaylistAdminResponse['settings'] | null>(null);
@@ -63,7 +65,11 @@ const FrameManagement: React.FC = () => {
     fetchPlaylist();
   }, []);
 
+<<<<<<< HEAD
   const handleUpload = async (options: any) => {
+=======
+  const handleUpload: NonNullable<UploadProps['customRequest']> = async (options) => {
+>>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
     const formData = new FormData();
     formData.append('image', options.file as File);
 

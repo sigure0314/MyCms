@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { FC } from 'react';
 import { 
   Card, Form, Input, Select, Button, Slider, 
+<<<<<<< HEAD
   Steps, Typography, Spin, Row, Col, Result,  message 
 } from 'antd';
 import { 
   RobotOutlined, EditOutlined, PictureOutlined, 
    CheckCircleOutlined 
+=======
+  Steps, Typography, Spin, Row, Col, Result, message 
+} from 'antd';
+import { 
+  RobotOutlined, EditOutlined, PictureOutlined, 
+  CheckCircleOutlined 
+>>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api'; // 匯入實體物件
 import type { GenerateScriptRequest, StoryDraft} from '../../services/api'; // 匯入型別
+<<<<<<< HEAD
 const {  Text } = Typography; // Typography 只負責標題和文字顯示
+=======
+const { Text } = Typography; // Typography 只負責標題和文字顯示
+>>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
 const { TextArea } = Input;         // TextArea 負責輸入多行文字
 
-const StoryGenerator: React.FC = () => {
+const StoryGenerator: FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0); // 0: 設定, 1: 修潤, 2: 完成
   const [loading, setLoading] = useState(false);

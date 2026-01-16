@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
+=======
+import { useEffect, useState } from 'react';
+import type { FC } from 'react';
+>>>>>>> 27cce3dd989fcce892e1e3c0da9c71b490e830b7
 import { Table, Card, Image, Tag, Typography } from 'antd';
 import api from '../../services/api';
 
@@ -22,7 +27,7 @@ interface Book {
   pages: BookPage[]; // 書本裡包含多個頁面
 }
 
-const BookManagement: React.FC = () => {
+const BookManagement: FC = () => {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
 
