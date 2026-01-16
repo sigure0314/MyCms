@@ -72,7 +72,7 @@ builder.Services.AddCors(opt => opt.AddPolicy("AllowConfiguredOrigins", policy =
     policy.WithOrigins(allowedOrigins)
         .AllowAnyMethod()
         .AllowAnyHeader()
-        .AllowCredentials()));
+      ));
 
 
 builder.Services.AddHttpClient<IGeminiClient, GeminiClient>();
