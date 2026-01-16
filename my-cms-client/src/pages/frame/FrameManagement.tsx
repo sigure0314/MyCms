@@ -12,7 +12,6 @@ import {
   Typography,
   Upload,
 } from 'antd';
-import type { UploadProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   ArrowDownOutlined,
