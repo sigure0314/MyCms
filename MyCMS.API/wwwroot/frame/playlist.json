@@ -1,19 +1,24 @@
 {
-  "version": 3,
+  "version": 15,
   "intervalMs": 15000,
   "transitionMs": 1200,
   "cacheBustMode": "v",
-  "startAtEpochMs": 1736812800000,
+  "startAtEpochMs": 1768645869994,
+  "layoutMode": "3x3",
   "items": [
-    { "url": "/frame/img/p001.jpg", "version": 1 },
-    { "url": "/frame/img/p002.jpg", "version": 1 },
-    { "url": "/frame/img/p003.jpg", "version": 1 },
-    { "url": "/frame/img/p004.jpg", "version": 1 },
-    { "url": "/frame/img/p005.jpg", "version": 1 },
-    { "url": "/frame/img/p006.jpg", "version": 1 },
-    { "url": "/frame/img/p007.jpg", "version": 1 },
-    { "url": "/frame/img/p008.jpg", "version": 1 },
-    { "url": "/frame/img/p009.jpg", "version": 1 },
-    { "url": "/frame/img/p010.jpg", "version": 1 }
+    {
+      "id": "a5f4602fb84443c08ef91e168b114888",
+      "fileName": "frame/frame_c7c12c58f16e465eab6f859772fb66bd.jpg",
+      "originalFileName": "pic_7927_30.jpg",
+      "order": 1,
+      "version": 1
+    },
+    {
+      "id": "17050a2ca3ad45f1961a4ce4b4386107",
+      "fileName": "frame/frame_8d04167c05a14256be1f2feb21375974.jpg",
+      "originalFileName": "pic_7927_32.jpg",
+      "order": 2,
+      "version": 1
+    }
   ]
 }
