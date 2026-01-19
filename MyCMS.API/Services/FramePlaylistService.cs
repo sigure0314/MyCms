@@ -44,9 +44,18 @@ public class FramePlaylistService
                 return playlist;
             }
 
+            FramePlaylist playlistData;
             await using var stream = File.OpenRead(_playlistPath);
-            var playlistData = await JsonSerializer.DeserializeAsync<FramePlaylist>(stream, _jsonOptions)
+            try
+            {
+                playlistData = await JsonSerializer.DeserializeAsync<FramePlaylist>(stream, _jsonOptions)
                                ?? CreateDefaultPlaylist();
+            }
+            catch (JsonException)
+            {
+                playlistData = CreateDefaultPlaylist();
+                await SaveInternalAsync(playlistData);
+            }
 
             NormalizePlaylist(playlistData);
             return playlistData;
