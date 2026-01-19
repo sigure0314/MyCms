@@ -6,6 +6,7 @@ namespace MyCMS.API.Services;
 public class FramePlaylistService
 {
     private readonly string _playlistPath;
+    private readonly string _legacyPlaylistPath;
     private readonly string _uploadsPath;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -17,7 +18,9 @@ public class FramePlaylistService
     public FramePlaylistService(IWebHostEnvironment environment)
     {
         var webRoot = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
-        _playlistPath = Path.Combine(webRoot, "frame", "playlist.json");
+        var dataRoot = Path.Combine(environment.ContentRootPath, "App_Data", "frame");
+        _playlistPath = Path.Combine(dataRoot, "playlist.json");
+        _legacyPlaylistPath = Path.Combine(webRoot, "frame", "playlist.json");
         _uploadsPath = Path.Combine(webRoot, "frame", "uploads");
     }
 
@@ -29,6 +32,11 @@ public class FramePlaylistService
         try
         {
             EnsureDirectories();
+            if (!File.Exists(_playlistPath) && File.Exists(_legacyPlaylistPath))
+            {
+                File.Copy(_legacyPlaylistPath, _playlistPath, overwrite: true);
+            }
+
             if (!File.Exists(_playlistPath))
             {
                 var playlist = CreateDefaultPlaylist();
