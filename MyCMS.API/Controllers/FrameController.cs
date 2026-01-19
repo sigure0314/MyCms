@@ -28,6 +28,7 @@ public class FrameController : ControllerBase
     public async Task<ActionResult<FramePlaylistPlaybackResponse>> GetPlaylist()
     {
         var playlist = await _playlistService.LoadAsync();
+        playlist = await EnsurePlaylistFromStorageAsync(playlist);
         var response = BuildPlaybackResponse(playlist);
         return Ok(response);
     }
@@ -37,6 +38,7 @@ public class FrameController : ControllerBase
     public async Task<ActionResult<FramePlaylistAdminResponse>> GetAdminPlaylist()
     {
         var playlist = await _playlistService.LoadAsync();
+        playlist = await EnsurePlaylistFromStorageAsync(playlist);
         var response = BuildAdminResponse(playlist);
         return Ok(response);
     }
@@ -232,6 +234,41 @@ public class FrameController : ControllerBase
             playlist.StartAtEpochMs,
             playlist.LayoutMode,
             items);
+    }
+
+    private async Task<FramePlaylist> EnsurePlaylistFromStorageAsync(FramePlaylist playlist)
+    {
+        if (playlist.Items.Count > 0)
+        {
+            return playlist;
+        }
+
+        var storageFolder = "frame";
+        var items = await _supabase.Storage.From(_bucketName).List(storageFolder);
+        var storageItems = items
+            .Where(item => !string.IsNullOrWhiteSpace(item.Name))
+            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
+            .Select((item, index) => new FramePlaylistItem
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                FileName = $"{storageFolder}/{item.Name}",
+                OriginalFileName = item.Name,
+                Order = index + 1,
+                Version = 1
+            })
+            .ToList();
+
+        if (storageItems.Count == 0)
+        {
+            return playlist;
+        }
+
+        playlist.Items = storageItems;
+        playlist.Version += 1;
+        playlist.StartAtEpochMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        await _playlistService.SaveAsync(playlist);
+        return playlist;
     }
 
     private string BuildImageUrl(string fileName)
