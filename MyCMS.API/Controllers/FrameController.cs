@@ -129,7 +129,15 @@ public class FrameController : ControllerBase
         if (!string.IsNullOrWhiteSpace(target.FileName) &&
             !target.FileName.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
-            if (target.FileName.Contains('/'))
+            if (IsLocalUploadPath(target.FileName))
+            {
+                var filePath = _playlistService.GetImagePath(target.FileName);
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+            else if (target.FileName.Contains('/'))
             {
                 await _supabase.Storage
                     .From(_bucketName)
@@ -220,6 +228,12 @@ public class FrameController : ControllerBase
             return fileName;
         }
 
+        if (IsLocalUploadPath(fileName))
+        {
+            var safeName = Path.GetFileName(fileName);
+            return $"/frame/uploads/{safeName}";
+        }
+
         if (!fileName.Contains('/'))
         {
             var safeName = Path.GetFileName(fileName);
@@ -228,5 +242,13 @@ public class FrameController : ControllerBase
 
         var safePath = fileName.TrimStart('/');
         return $"{_supabaseUrl}/storage/v1/object/public/{_bucketName}/{safePath}";
+    }
+
+    private static bool IsLocalUploadPath(string fileName)
+    {
+        return fileName.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase)
+               || fileName.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
+               || fileName.StartsWith("frame/uploads/", StringComparison.OrdinalIgnoreCase)
+               || fileName.StartsWith("/frame/uploads/", StringComparison.OrdinalIgnoreCase);
     }
 }
