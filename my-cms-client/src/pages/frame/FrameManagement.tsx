@@ -187,11 +187,21 @@ const FrameManagement: FC = () => {
   }, [layoutMode]);
 
   const panelLinks = useMemo(() => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+    const apiBaseUrl = api.defaults.baseURL ?? '';
+    let frameBaseUrl = fallbackOrigin;
+
+    try {
+      const resolvedApiUrl = new URL(apiBaseUrl, fallbackOrigin);
+      const trimmedPath = resolvedApiUrl.pathname.replace(/\/api\/?$/i, '');
+      frameBaseUrl = `${resolvedApiUrl.origin}${trimmedPath}`.replace(/\/$/, '');
+    } catch {
+      frameBaseUrl = fallbackOrigin;
+    }
 
     return Array.from({ length: layoutConfig.cols * layoutConfig.rows }, (_, index) => ({
       panelNumber: index + 1,
-      url: `${baseUrl}/frame/frame.html?cols=${layoutConfig.cols}&rows=${layoutConfig.rows}&index=${index}`,
+      url: `${frameBaseUrl}/frame/frame.html?cols=${layoutConfig.cols}&rows=${layoutConfig.rows}&index=${index}`,
     }));
   }, [layoutConfig.cols, layoutConfig.rows]);
 
