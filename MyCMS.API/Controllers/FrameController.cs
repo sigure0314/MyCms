@@ -12,13 +12,19 @@ public class FrameController : ControllerBase
 {
     private readonly FramePlaylistService _playlistService;
     private readonly Supabase.Client _supabase;
+    private readonly ILogger<FrameController> _logger;
     private readonly string _supabaseUrl;
     private readonly string _bucketName;
 
-    public FrameController(FramePlaylistService playlistService, Supabase.Client supabase, IConfiguration config)
+    public FrameController(
+        FramePlaylistService playlistService,
+        Supabase.Client supabase,
+        ILogger<FrameController> logger,
+        IConfiguration config)
     {
         _playlistService = playlistService;
         _supabase = supabase;
+        _logger = logger;
         _supabaseUrl = config["Supabase:Url"] ?? string.Empty;
         _bucketName = config["Supabase:FrameBucketName"] ?? "frame";
     }
@@ -157,18 +163,26 @@ public class FrameController : ControllerBase
                     System.IO.File.Delete(filePath);
                 }
             }
-            else if (target.FileName.Contains('/'))
-            {
-                await _supabase.Storage
-                    .From(_bucketName)
-                    .Remove(new List<string> { target.FileName.TrimStart('/') });
-            }
             else
             {
-                var filePath = _playlistService.GetImagePath(target.FileName);
-                if (System.IO.File.Exists(filePath))
+                var storagePath = target.FileName.TrimStart('/');
+                try
                 {
-                    System.IO.File.Delete(filePath);
+                    await _supabase.Storage
+                        .From(_bucketName)
+                        .Remove(new List<string> { storagePath });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to remove storage object {StoragePath}", storagePath);
+                    if (!target.FileName.Contains('/'))
+                    {
+                        var filePath = _playlistService.GetImagePath(target.FileName);
+                        if (System.IO.File.Exists(filePath))
+                        {
+                            System.IO.File.Delete(filePath);
+                        }
+                    }
                 }
             }
         }
