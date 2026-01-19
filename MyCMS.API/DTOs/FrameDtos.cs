@@ -39,3 +39,5 @@ public record FramePlaylistPlaybackResponse(
     IReadOnlyList<FramePlaylistPlaybackItem> Items);
 
 public record FramePlaylistPlaybackItem(string Url, int Version);
+
+public record FrameStorageImageResponse(string Path, string Url);

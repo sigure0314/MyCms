@@ -41,6 +41,24 @@ public class FrameController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("storage-images")]
+    [Authorize(Policy = "Permission:api.frame.get")]
+    public async Task<ActionResult<IReadOnlyList<FrameStorageImageResponse>>> GetStorageImages()
+    {
+        var storageFolder = "frame";
+        var items = await _supabase.Storage.From(_bucketName).List(storageFolder);
+        var images = items
+            .Where(item => !string.IsNullOrWhiteSpace(item.Name))
+            .Select(item =>
+            {
+                var path = $"{storageFolder}/{item.Name}";
+                return new FrameStorageImageResponse(path, BuildImageUrl(path));
+            })
+            .ToList();
+
+        return Ok(images);
+    }
+
     [HttpPost("images")]
     [Authorize(Policy = "Permission:api.frame.update")]
     [Consumes("multipart/form-data")]
