@@ -10,7 +10,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace MyCMS.API.Migrations.Kitchen
 {
-    [DbContext(typeof(KitchenDbContext))]
+    [DbContext(typeof(global::MyCMS.API.Data.KitchenDbContext))]
     partial class KitchenDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
