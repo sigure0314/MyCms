@@ -100,6 +100,9 @@ if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 using (var scope = app.Services.CreateScope()) {
     var kitchenDb = scope.ServiceProvider.GetRequiredService<KitchenDbContext>();
     if (kitchenDb.Database.IsRelational()) {
+        if (kitchenDb.Database.IsNpgsql()) {
+            EnsureKitchenMigrationHistory(kitchenDb);
+        }
         kitchenDb.Database.Migrate();
     }
 }
@@ -115,3 +118,61 @@ app.MapHub<StoryHub>("/storyHub");
 app.MapHub<OrdersHub>("/hubs/orders");
 app.MapFallbackToFile("index.html");
 app.Run();
+
+static void EnsureKitchenMigrationHistory(KitchenDbContext kitchenDb) {
+    const string initialMigrationId = "20250313000000_InitialKitchenSchema";
+    const string productVersion = "9.0.0";
+
+    var connection = kitchenDb.Database.GetDbConnection();
+    connection.Open();
+    try {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = '__EFMigrationsHistory'
+            );
+            """;
+        var historyExists = (bool)command.ExecuteScalar()!;
+
+        command.CommandText = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'Orders'
+            );
+            """;
+        var ordersExists = (bool)command.ExecuteScalar()!;
+
+        if (!historyExists && ordersExists) {
+            command.CommandText = """
+                CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                    "MigrationId" character varying(150) NOT NULL,
+                    "ProductVersion" character varying(32) NOT NULL,
+                    CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+                );
+                """;
+            command.ExecuteNonQuery();
+
+            command.CommandText = """
+                INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                VALUES (@migrationId, @productVersion)
+                ON CONFLICT ("MigrationId") DO NOTHING;
+                """;
+            var migrationIdParam = command.CreateParameter();
+            migrationIdParam.ParameterName = "migrationId";
+            migrationIdParam.Value = initialMigrationId;
+            command.Parameters.Add(migrationIdParam);
+
+            var productVersionParam = command.CreateParameter();
+            productVersionParam.ParameterName = "productVersion";
+            productVersionParam.Value = productVersion;
+            command.Parameters.Add(productVersionParam);
+
+            command.ExecuteNonQuery();
+        }
+    } finally {
+        connection.Close();
+    }
+}
