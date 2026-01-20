@@ -145,32 +145,55 @@ static void EnsureKitchenMigrationHistory(KitchenDbContext kitchenDb) {
             """;
         var ordersExists = (bool)command.ExecuteScalar()!;
 
-        if (!historyExists && ordersExists) {
-            command.CommandText = """
-                CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
-                    "MigrationId" character varying(150) NOT NULL,
-                    "ProductVersion" character varying(32) NOT NULL,
-                    CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
-                );
-                """;
-            command.ExecuteNonQuery();
+        if (ordersExists) {
+            if (!historyExists) {
+                command.CommandText = """
+                    CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+                        "MigrationId" character varying(150) NOT NULL,
+                        "ProductVersion" character varying(32) NOT NULL,
+                        CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+                    );
+                    """;
+                command.ExecuteNonQuery();
+                historyExists = true;
+            }
 
-            command.CommandText = """
-                INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-                VALUES (@migrationId, @productVersion)
-                ON CONFLICT ("MigrationId") DO NOTHING;
-                """;
-            var migrationIdParam = command.CreateParameter();
-            migrationIdParam.ParameterName = "migrationId";
-            migrationIdParam.Value = initialMigrationId;
-            command.Parameters.Add(migrationIdParam);
+            var migrationApplied = false;
+            if (historyExists) {
+                command.CommandText = """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM "__EFMigrationsHistory"
+                        WHERE "MigrationId" = @migrationId
+                    );
+                    """;
+                command.Parameters.Clear();
+                var migrationIdParam = command.CreateParameter();
+                migrationIdParam.ParameterName = "migrationId";
+                migrationIdParam.Value = initialMigrationId;
+                command.Parameters.Add(migrationIdParam);
+                migrationApplied = (bool)command.ExecuteScalar()!;
+            }
 
-            var productVersionParam = command.CreateParameter();
-            productVersionParam.ParameterName = "productVersion";
-            productVersionParam.Value = productVersion;
-            command.Parameters.Add(productVersionParam);
+            if (!migrationApplied) {
+                command.CommandText = """
+                    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                    VALUES (@migrationId, @productVersion)
+                    ON CONFLICT ("MigrationId") DO NOTHING;
+                    """;
+                command.Parameters.Clear();
+                var migrationIdParam = command.CreateParameter();
+                migrationIdParam.ParameterName = "migrationId";
+                migrationIdParam.Value = initialMigrationId;
+                command.Parameters.Add(migrationIdParam);
 
-            command.ExecuteNonQuery();
+                var productVersionParam = command.CreateParameter();
+                productVersionParam.ParameterName = "productVersion";
+                productVersionParam.Value = productVersion;
+                command.Parameters.Add(productVersionParam);
+
+                command.ExecuteNonQuery();
+            }
         }
     } finally {
         connection.Close();
