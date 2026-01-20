@@ -15,27 +15,28 @@ public class MenuController : ControllerBase {
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<MenuItem>> GetMenu() {
-        return Ok(_menuService.GetMenu());
+    public async Task<ActionResult<IEnumerable<MenuItem>>> GetMenu() {
+        var menu = await _menuService.GetMenuAsync();
+        return Ok(menu);
     }
 
     [HttpPost]
-    public ActionResult<MenuItem> CreateMenuItem([FromBody] CreateMenuItemRequest request) {
+    public async Task<ActionResult<MenuItem>> CreateMenuItem([FromBody] CreateMenuItemRequest request) {
         if (!ModelState.IsValid) {
             return ValidationProblem(ModelState);
         }
 
-        var created = _menuService.AddMenuItem(request.Name, request.Description, request.Price, request.Category);
+        var created = await _menuService.AddMenuItemAsync(request.Name, request.Description, request.Price, request.Category);
         return CreatedAtAction(nameof(GetMenu), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
-    public ActionResult<MenuItem> UpdateMenuItem(int id, [FromBody] UpdateMenuItemRequest request) {
+    public async Task<ActionResult<MenuItem>> UpdateMenuItem(int id, [FromBody] UpdateMenuItemRequest request) {
         if (!ModelState.IsValid) {
             return ValidationProblem(ModelState);
         }
 
-        var updated = _menuService.UpdateMenuItem(id, request.Name, request.Description, request.Price, request.Category);
+        var updated = await _menuService.UpdateMenuItemAsync(id, request.Name, request.Description, request.Price, request.Category);
         if (updated == null) {
             return NotFound();
         }
@@ -44,8 +45,8 @@ public class MenuController : ControllerBase {
     }
 
     [HttpDelete("{id:int}")]
-    public IActionResult DeleteMenuItem(int id) {
-        var removed = _menuService.DeleteMenuItem(id);
+    public async Task<IActionResult> DeleteMenuItem(int id) {
+        var removed = await _menuService.DeleteMenuItemAsync(id);
         if (!removed) {
             return NotFound();
         }

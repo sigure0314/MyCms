@@ -38,7 +38,7 @@ builder.Services.AddScoped<Supabase.Client>(_ =>
 // 2. Services DI
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddSingleton<MenuService>();
+builder.Services.AddScoped<MenuService>();
 builder.Services.AddSingleton<FramePlaylistService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

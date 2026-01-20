@@ -25,8 +25,9 @@ public class OrdersController : ControllerBase {
 
     [HttpGet("menu")]
     [Authorize(Policy = "Permission:api.orders.menu")]
-    public ActionResult<IEnumerable<MenuItem>> GetMenu() {
-        return Ok(_menuService.GetMenu());
+    public async Task<ActionResult<IEnumerable<MenuItem>>> GetMenu() {
+        var menu = await _menuService.GetMenuAsync();
+        return Ok(menu);
     }
 
     [HttpGet]
