@@ -97,6 +97,13 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
+using (var scope = app.Services.CreateScope()) {
+    var kitchenDb = scope.ServiceProvider.GetRequiredService<KitchenDbContext>();
+    if (kitchenDb.Database.IsRelational()) {
+        kitchenDb.Database.Migrate();
+    }
+}
+
 //app.UseCors("AllowReact");
 app.UseDefaultFiles();
 app.UseStaticFiles();
