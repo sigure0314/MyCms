@@ -8,9 +8,9 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyCMS.API.Migrations.KitchenDbContext
+namespace MyCMS.API.Migrations.Kitchen
 {
-    [DbContext(typeof(KitchenDbContext))]
+    [DbContext(typeof(global::MyCMS.API.Data.KitchenDbContext))]
     partial class KitchenDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

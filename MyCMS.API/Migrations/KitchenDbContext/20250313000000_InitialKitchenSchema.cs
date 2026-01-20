@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyCMS.API.Migrations.KitchenDbContext
+namespace MyCMS.API.Migrations.Kitchen
 {
     /// <inheritdoc />
     public partial class InitialKitchenSchema : Migration

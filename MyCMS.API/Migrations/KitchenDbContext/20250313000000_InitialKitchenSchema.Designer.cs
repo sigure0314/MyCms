@@ -9,9 +9,9 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyCMS.API.Migrations.KitchenDbContext
+namespace MyCMS.API.Migrations.Kitchen
 {
-    [DbContext(typeof(KitchenDbContext))]
+    [DbContext(typeof(global::MyCMS.API.Data.KitchenDbContext))]
     [Migration("20250313000000_InitialKitchenSchema")]
     partial class InitialKitchenSchema
     {
