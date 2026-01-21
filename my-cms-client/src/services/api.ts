@@ -59,6 +59,15 @@ export interface UserSummary {
   role: string;
 }
 
+export interface OnlineUser {
+  username: string;
+  totalSeconds: number;
+  currentPage: string;
+  loginIp: string;
+  loginAtUtc: string;
+  lastSeenUtc: string;
+}
+
 export interface Permission {
   id: number;
   parentId?: number | null;
@@ -209,6 +218,12 @@ const api = {
   },
   getUsers: () => {
     return axiosInstance.get<UserSummary[]>('/users');
+  },
+  getOnlineUsers: () => {
+    return axiosInstance.get<OnlineUser[]>('/onlineusers');
+  },
+  heartbeatOnlineUser: (currentPage: string) => {
+    return axiosInstance.post('/onlineusers/heartbeat', { currentPage });
   },
   updateUserRole: (id: number, roleId: number) => {
     return axiosInstance.patch<UserSummary>(`/users/${id}/role`, { roleId });

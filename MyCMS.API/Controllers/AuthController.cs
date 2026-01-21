@@ -12,10 +12,12 @@ namespace MyCMS.API.Controllers;
 public class AuthController : ControllerBase {
     private readonly AppDbContext _context;
     private readonly TokenService _tokenService;
+    private readonly IOnlineUserTracker _onlineUserTracker;
 
-    public AuthController(AppDbContext context, TokenService tokenService) {
+    public AuthController(AppDbContext context, TokenService tokenService, IOnlineUserTracker onlineUserTracker) {
         _context = context;
         _tokenService = tokenService;
+        _onlineUserTracker = onlineUserTracker;
     }
 
     [HttpPost("register")]
@@ -54,6 +56,9 @@ public class AuthController : ControllerBase {
             .FirstOrDefaultAsync(u => u.Username == req.Username);
         if (user == null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash)) return Unauthorized();
         var permissions = GetPermissionCodes(user.Role);
+
+        var loginIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+        await _onlineUserTracker.RecordLoginAsync(user.Username, loginIp);
         
         return Ok(new AuthResponse { 
             Token = _tokenService.CreateToken(user, permissions),

@@ -20,6 +20,7 @@ import {
   PictureOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
+import api from '../services/api';
 
 const { Header, Sider, Content } = Layout;
 
@@ -33,6 +34,20 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     void authService.ensurePermissionsLoaded();
   }, []);
+
+  useEffect(() => {
+    if (!authService.isAuthenticated()) {
+      return;
+    }
+
+    const sendHeartbeat = () => {
+      void api.heartbeatOnlineUser(location.pathname);
+    };
+
+    sendHeartbeat();
+    const interval = window.setInterval(sendHeartbeat, 30000);
+    return () => window.clearInterval(interval);
+  }, [location.pathname]);
 
   // 定義選單結構 (支援巢狀)
   const menuItems: MenuProps['items'] = [
@@ -55,6 +70,11 @@ const MainLayout: React.FC = () => {
           key: '/users', // 子選單 key 對應路由路徑
           icon: <TeamOutlined />,
           label: '會員列表',
+        },
+        {
+          key: '/users/online',
+          icon: <TeamOutlined />,
+          label: '線上使用者',
         },
         {
           key: '/permissions',
