@@ -9,6 +9,7 @@ import PermissionRoute from './components/PermissionRoute';
 // 匯入新頁面
 import Dashboard from './pages/Dashboard';
 import UserList from './pages/users/UserList';
+import OnlineUserList from './pages/users/OnlineUserList';
 import PermissionsLayout from './pages/users/permissions/PermissionsLayout';
 import PermissionManagement from './pages/users/permissions/PermissionManagement';
 import RoleManagement from './pages/users/permissions/RoleManagement';
@@ -56,6 +57,10 @@ const App = () => (
           <Route
             path="/users"
             element={<PermissionRoute path="/users" element={<UserList />} />}
+          />
+          <Route
+            path="/users/online"
+            element={<PermissionRoute path="/users/online" element={<OnlineUserList />} />}
           />
           <Route
             path="/permissions"
