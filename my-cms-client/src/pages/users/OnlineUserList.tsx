@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Table, Tag } from 'antd';
-import api, { OnlineUser } from '../../services/api';
+import api, { type OnlineUser } from '../../services/api';
 
 const formatDuration = (totalSeconds: number) => {
   const rounded = Math.max(0, Math.floor(totalSeconds));
