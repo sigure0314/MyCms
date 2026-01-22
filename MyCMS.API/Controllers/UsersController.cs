@@ -30,11 +30,116 @@ public class UsersController : ControllerBase
                 u.Id,
                 u.Username,
                 u.Email,
-                Role = u.Role.Name
+                Role = u.Role.Name,
+                u.RoleId
             })
             .ToListAsync();
 
         return Ok(users);
+    }
+
+    [HttpPost]
+    [Authorize(Policy = "Permission:api.users.create")]
+    public async Task<IActionResult> CreateUser(CreateUserRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest("Username and email are required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest("Password is required.");
+        }
+
+        if (await _context.Users.AnyAsync(u => u.Username == request.Username))
+        {
+            return BadRequest("User exists");
+        }
+
+        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        {
+            return BadRequest("Email exists");
+        }
+
+        var role = await _context.Roles.FindAsync(request.RoleId);
+        if (role == null)
+        {
+            return BadRequest("Role not found.");
+        }
+
+        var user = new Models.User
+        {
+            Username = request.Username,
+            Email = request.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            RoleId = role.Id
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+        await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+
+        return CreatedAtAction(nameof(GetUsers), new
+        {
+            user.Id,
+            user.Username,
+            user.Email,
+            Role = user.Role.Name,
+            user.RoleId
+        });
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Policy = "Permission:api.users.update")]
+    public async Task<IActionResult> UpdateUser(int id, UpdateUserRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest("Username and email are required.");
+        }
+
+        var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (await _context.Users.AnyAsync(u => u.Id != id && u.Username == request.Username))
+        {
+            return BadRequest("User exists");
+        }
+
+        if (await _context.Users.AnyAsync(u => u.Id != id && u.Email == request.Email))
+        {
+            return BadRequest("Email exists");
+        }
+
+        var role = await _context.Roles.FindAsync(request.RoleId);
+        if (role == null)
+        {
+            return BadRequest("Role not found.");
+        }
+
+        user.Username = request.Username;
+        user.Email = request.Email;
+        user.RoleId = role.Id;
+        if (!string.IsNullOrWhiteSpace(request.Password))
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+        }
+
+        await _context.SaveChangesAsync();
+        await _context.Entry(user).Reference(u => u.Role).LoadAsync();
+
+        return Ok(new
+        {
+            user.Id,
+            user.Username,
+            user.Email,
+            Role = user.Role.Name,
+            user.RoleId
+        });
     }
 
     [HttpPatch("{id:int}/role")]

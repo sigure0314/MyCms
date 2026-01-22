@@ -57,6 +57,7 @@ export interface UserSummary {
   username: string;
   email: string;
   role: string;
+  roleId: number;
 }
 
 export interface OnlineUser {
@@ -94,6 +95,20 @@ export interface UpdateMenuItemRequest {
   description: string;
   price: number;
   category: string;
+}
+
+export interface CreateUserRequest {
+  username: string;
+  email: string;
+  password: string;
+  roleId: number;
+}
+
+export interface UpdateUserRequest {
+  username: string;
+  email: string;
+  roleId: number;
+  password?: string;
 }
 
 export interface FramePlaylistSettings {
@@ -227,6 +242,12 @@ const api = {
   },
   updateUserRole: (id: number, roleId: number) => {
     return axiosInstance.patch<UserSummary>(`/users/${id}/role`, { roleId });
+  },
+  createUser: (data: CreateUserRequest) => {
+    return axiosInstance.post<UserSummary>('/users', data);
+  },
+  updateUser: (id: number, data: UpdateUserRequest) => {
+    return axiosInstance.put<UserSummary>(`/users/${id}`, data);
   },
   getPermissions: () => {
     return axiosInstance.get<Permission[]>('/permissions');
