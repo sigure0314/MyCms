@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, message } from 'antd';
 import api, { type Role, type UserSummary } from '../../services/api';
 
@@ -19,18 +19,19 @@ const UserList: React.FC = () => {
   const [form] = Form.useForm<UserFormValues>();
   const [messageApi, contextHolder] = message.useMessage();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        const res = await api.getUsers();
-        setUsers(res.data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void fetchUsers();
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.getUsers();
+      setUsers(res.data);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchUsers();
+  }, [fetchUsers]);
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -98,21 +99,21 @@ const UserList: React.FC = () => {
           roleId,
           password: password ? password : undefined,
         };
-        const res = await api.updateUser(activeUser.id, payload);
-        setUsers(prev => prev.map(user => (user.id === activeUser.id ? res.data : user)));
+        await api.updateUser(activeUser.id, payload);
+        await fetchUsers();
         messageApi.success('會員資料已更新');
       } else {
         if (!password) {
           messageApi.error('請輸入密碼');
           return;
         }
-        const res = await api.createUser({
+        await api.createUser({
           username,
           email,
           roleId,
           password,
         });
-        setUsers(prev => [res.data, ...prev]);
+        await fetchUsers();
         messageApi.success('會員已新增');
       }
       setIsModalOpen(false);
