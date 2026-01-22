@@ -44,6 +44,16 @@ const UserList: React.FC = () => {
     void fetchRoles();
   }, []);
 
+  useEffect(() => {
+    if (!isModalOpen || activeUser || roles.length === 0) {
+      return;
+    }
+    const currentRoleId = form.getFieldValue('roleId');
+    if (!currentRoleId) {
+      form.setFieldsValue({ roleId: roles[0].id });
+    }
+  }, [activeUser, form, isModalOpen, roles]);
+
   const roleOptions = useMemo(
     () => roles.map(role => ({ label: role.name, value: role.id })),
     [roles]
@@ -72,23 +82,35 @@ const UserList: React.FC = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+      const username = values.username.trim();
+      const email = values.email.trim();
+      const password = values.password?.trim() ?? '';
+      const roleId = Number(values.roleId);
+      if (!username || !email || !roleId) {
+        messageApi.error('請確認欄位內容');
+        return;
+      }
       setSaving(true);
       if (activeUser) {
         const payload = {
-          username: values.username,
-          email: values.email,
-          roleId: values.roleId,
-          password: values.password?.trim() ? values.password : undefined,
+          username,
+          email,
+          roleId,
+          password: password ? password : undefined,
         };
         const res = await api.updateUser(activeUser.id, payload);
         setUsers(prev => prev.map(user => (user.id === activeUser.id ? res.data : user)));
         messageApi.success('會員資料已更新');
       } else {
+        if (!password) {
+          messageApi.error('請輸入密碼');
+          return;
+        }
         const res = await api.createUser({
-          username: values.username,
-          email: values.email,
-          roleId: values.roleId,
-          password: values.password ?? '',
+          username,
+          email,
+          roleId,
+          password,
         });
         setUsers(prev => [res.data, ...prev]);
         messageApi.success('會員已新增');
@@ -156,7 +178,7 @@ const UserList: React.FC = () => {
           <Form.Item
             label="帳號"
             name="username"
-            rules={[{ required: true, message: '請輸入帳號' }]}
+            rules={[{ required: true, whitespace: true, message: '請輸入帳號' }]}
           >
             <Input placeholder="請輸入帳號" />
           </Form.Item>
@@ -164,7 +186,7 @@ const UserList: React.FC = () => {
             label="信箱"
             name="email"
             rules={[
-              { required: true, message: '請輸入信箱' },
+              { required: true, whitespace: true, message: '請輸入信箱' },
               { type: 'email', message: '請輸入有效信箱' },
             ]}
           >
@@ -180,7 +202,11 @@ const UserList: React.FC = () => {
           <Form.Item
             label={activeUser ? '新密碼 (選填)' : '密碼'}
             name="password"
-            rules={activeUser ? [] : [{ required: true, message: '請輸入密碼' }]}
+            rules={
+              activeUser
+                ? []
+                : [{ required: true, whitespace: true, message: '請輸入密碼' }]
+            }
           >
             <Input.Password placeholder={activeUser ? '留空表示不變更' : '請輸入密碼'} />
           </Form.Item>
