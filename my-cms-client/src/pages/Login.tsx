@@ -6,16 +6,18 @@ import type { LoginRequest } from '../types/auth';
 const Login = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm<LoginRequest>();
-  const fillVisitorCredentials = async () => {
+  const loginAsVisitor = async () => {
     try {
       const visitor = await authService.getVisitorCredentials();
       if (!visitor?.username || !visitor?.password) {
         message.error('訪客帳號未設定');
         return;
       }
-      form.setFieldsValue({ username: visitor.username, password: visitor.password });
+      await authService.login({ username: visitor.username, password: visitor.password });
+      message.success('登入成功');
+      navigate('/dashboard');
     } catch {
-      message.error('取得訪客帳號失敗');
+      message.error('訪客登入失敗');
     }
   };
   const onFinish = async (values: LoginRequest) => {
@@ -32,7 +34,7 @@ const Login = () => {
         <Form form={form} onFinish={onFinish}>
           <Form.Item name="username" rules={[{ required: true }]}><Input placeholder="Username" /></Form.Item>
           <Form.Item name="password" rules={[{ required: true }]}><Input.Password placeholder="Password" /></Form.Item>
-          <Button type="link" onClick={fillVisitorCredentials} style={{ padding: 0 }}>
+          <Button type="link" onClick={loginAsVisitor} style={{ padding: 0 }}>
             訪客登入
           </Button>
           <Button type="primary" htmlType="submit" block>Login</Button>
