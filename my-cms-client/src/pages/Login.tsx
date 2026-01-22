@@ -1,4 +1,5 @@
 import { Form, Input, Button, Card, message, Space, Spin } from 'antd';
+import axios from 'axios';
 import { useState } from 'react';
 import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +20,14 @@ const Login = () => {
       await authService.login({ username: visitor.username, password: visitor.password });
       message.success('登入成功');
       navigate('/dashboard');
-    } catch {
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status === 404 || status === 400) {
+          message.error('訪客帳號未設定');
+          return;
+        }
+      }
       message.error('訪客登入失敗');
     } finally {
       setLoading(false);
