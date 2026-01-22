@@ -13,11 +13,13 @@ public class AuthController : ControllerBase {
     private readonly AppDbContext _context;
     private readonly TokenService _tokenService;
     private readonly IOnlineUserTracker _onlineUserTracker;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(AppDbContext context, TokenService tokenService, IOnlineUserTracker onlineUserTracker) {
+    public AuthController(AppDbContext context, TokenService tokenService, IOnlineUserTracker onlineUserTracker, IConfiguration configuration) {
         _context = context;
         _tokenService = tokenService;
         _onlineUserTracker = onlineUserTracker;
+        _configuration = configuration;
     }
 
     [HttpPost("register")]
@@ -65,6 +67,18 @@ public class AuthController : ControllerBase {
             Username = user.Username,
             Role = user.Role.Name
         });
+    }
+
+    [HttpGet("visitor-credentials")]
+    public ActionResult<VisitorCredentialsResponse> GetVisitorCredentials() {
+        var username = _configuration["VisitorAccount:Username"];
+        var password = _configuration["VisitorAccount:Password"];
+
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password)) {
+            return NotFound("Visitor account is not configured.");
+        }
+
+        return Ok(new VisitorCredentialsResponse(username, password));
     }
 
     private static List<string> GetPermissionCodes(Role role) {

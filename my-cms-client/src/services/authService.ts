@@ -1,5 +1,5 @@
 import api from './api';
-import type { LoginRequest, AuthResponse } from '../types/auth';
+import type { LoginRequest, AuthResponse, VisitorCredentialsResponse } from '../types/auth';
 
 const PERMISSIONS_STORAGE_KEY = 'permissionRoutes';
 const ROLE_STORAGE_KEY = 'role';
@@ -98,6 +98,10 @@ export const authService = {
       localStorage.setItem(ROLE_STORAGE_KEY, res.data.role);
       await loadUserPermissions(res.data.role);
     }
+    return res.data;
+  },
+  getVisitorCredentials: async (): Promise<VisitorCredentialsResponse> => {
+    const res = await api.get<VisitorCredentialsResponse>('/auth/visitor-credentials');
     return res.data;
   },
   logout: () => {
