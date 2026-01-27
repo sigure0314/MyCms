@@ -1,4 +1,5 @@
 import { Form, Input, Button, Card, message, Space } from 'antd';
+import axios from 'axios';
 import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import type { LoginRequest } from '../types/auth';
@@ -10,14 +11,24 @@ const Login = () => {
       await authService.login(values);
       message.success('登入成功');
       navigate('/dashboard');
-    } catch { message.error('登入失敗'); }
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        message.error('帳號或密碼錯誤');
+        return;
+      }
+      message.error('登入失敗');
+    }
   };
   const onGuestLogin = async () => {
     try {
       await authService.guestLogin();
       message.success('已進入試用模式');
       navigate('/dashboard');
-    } catch {
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        message.error('試用帳號無法登入');
+        return;
+      }
       message.error('試用登入失敗');
     }
   };
