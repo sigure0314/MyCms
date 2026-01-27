@@ -12,6 +12,15 @@ const Login = () => {
       navigate('/dashboard');
     } catch { message.error('登入失敗'); }
   };
+  const onGuestLogin = async () => {
+    try {
+      await authService.guestLogin();
+      message.success('已進入試用模式');
+      navigate('/dashboard');
+    } catch {
+      message.error('試用登入失敗');
+    }
+  };
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f0f2f5' }}>
@@ -29,6 +38,9 @@ const Login = () => {
             忘記密碼
           </Button>
         </Space>
+        <Button style={{ marginTop: 12 }} onClick={onGuestLogin} block>
+          試用 Guest
+        </Button>
       </Card>
     </div>
   );

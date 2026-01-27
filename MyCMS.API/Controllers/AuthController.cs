@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyCMS.API.Data;
@@ -64,6 +65,44 @@ public class AuthController : ControllerBase {
             Token = _tokenService.CreateToken(user, permissions),
             Username = user.Username,
             Role = user.Role.Name
+        });
+    }
+
+    [HttpPost("guest")]
+    public async Task<ActionResult<AuthResponse>> GuestLogin() {
+        var guestRole = await _context.Roles
+            .Include(r => r.RolePermissions)
+            .ThenInclude(rp => rp.Permission)
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == "guest");
+        if (guestRole == null) {
+            return BadRequest("Guest role not configured");
+        }
+
+        var username = $"guest_{Guid.NewGuid():N}";
+        var guestUser = new User {
+            Username = username,
+            Email = $"{username}@guest.local",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N")),
+            RoleId = guestRole.Id
+        };
+
+        _context.Users.Add(guestUser);
+        await _context.SaveChangesAsync();
+
+        var userWithRole = await _context.Users
+            .Include(u => u.Role)
+            .ThenInclude(r => r.RolePermissions)
+            .ThenInclude(rp => rp.Permission)
+            .FirstAsync(u => u.Id == guestUser.Id);
+        var permissions = GetPermissionCodes(userWithRole.Role);
+
+        var loginIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+        await _onlineUserTracker.RecordLoginAsync(userWithRole.Username, loginIp);
+
+        return Ok(new AuthResponse {
+            Token = _tokenService.CreateToken(userWithRole, permissions),
+            Username = userWithRole.Username,
+            Role = userWithRole.Role.Name
         });
     }
 

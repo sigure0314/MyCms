@@ -100,6 +100,15 @@ export const authService = {
     }
     return res.data;
   },
+  guestLogin: async (): Promise<AuthResponse> => {
+    const res = await api.post<AuthResponse>('/auth/guest');
+    if (res.data.token) {
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem(ROLE_STORAGE_KEY, res.data.role);
+      await loadUserPermissions(res.data.role);
+    }
+    return res.data;
+  },
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem(ROLE_STORAGE_KEY);
