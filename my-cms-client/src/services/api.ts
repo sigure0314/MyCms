@@ -155,22 +155,46 @@ const axiosInstance = axios.create({
     baseURL: BASE_URL 
 });
 
+let pendingRequests = 0;
+
+const notifyLoadingChange = () => {
+  window.dispatchEvent(new CustomEvent('api:loading', { detail: pendingRequests }));
+};
+
+const startLoading = () => {
+  pendingRequests += 1;
+  notifyLoadingChange();
+};
+
+const stopLoading = () => {
+  pendingRequests = Math.max(0, pendingRequests - 1);
+  notifyLoadingChange();
+};
+
 // 3. Request Interceptor: 注入 Token
 axiosInstance.interceptors.request.use((config) => {
+  startLoading();
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, (error) => {
+  stopLoading();
   return Promise.reject(error);
 });
 
 // 4. Response Interceptor: 處理 401 登出
 axiosInstance.interceptors.response.use(
-    res => res, 
+    res => {
+        stopLoading();
+        return res;
+    }, 
     err => {
-        if (err.response && err.response.status === 401) {
+        stopLoading();
+        const requestUrl = err.config?.url ?? '';
+        const isAuthRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/guest');
+        if (err.response && err.response.status === 401 && !isAuthRequest) {
             localStorage.removeItem('token');
             // 這裡建議使用 window.location.href 強制跳轉，確保清除狀態
             window.location.href = '/login';

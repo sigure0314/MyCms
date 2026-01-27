@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Spin } from 'antd';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -30,9 +32,21 @@ import PosAsyncKitchen from './pages/PosAsyncKitchen';
 import MenuManagement from './pages/pos/MenuManagement';
 import FrameManagement from './pages/frame/FrameManagement';
 
-const App = () => (
-  <BrowserRouter>
-    <Routes>
+const App = () => {
+  const [apiLoading, setApiLoading] = useState(false);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const { detail } = event as CustomEvent<number>;
+      setApiLoading(detail > 0);
+    };
+    window.addEventListener('api:loading', handler as EventListener);
+    return () => window.removeEventListener('api:loading', handler as EventListener);
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -129,9 +143,25 @@ const App = () => (
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
-  </BrowserRouter>
-);
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+      {apiLoading && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(255, 255, 255, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+          }}
+        >
+          <Spin size="large" tip="資料載入中..." />
+        </div>
+      )}
+    </BrowserRouter>
+  );
+};
 
 export default App;
