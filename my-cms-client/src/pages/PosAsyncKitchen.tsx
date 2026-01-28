@@ -71,6 +71,13 @@ const saveFallbackOrders = (orders: Order[]) => {
 const sortOrdersByCreatedAt = (orders: Order[]) =>
   [...orders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
+const addOrderIfMissing = (orders: Order[], incoming: Order) => {
+  if (orders.some((order) => order.id === incoming.id)) {
+    return orders;
+  }
+  return sortOrdersByCreatedAt([...orders, incoming]);
+};
+
 const getOrderPillClassName = (status: string) => (status === 'Completed' ? 'order-pill is-completed' : 'order-pill');
 const ORDER_STATUS_OPTIONS = ['Queued', 'Preparing', 'Ready', 'Completed'];
 const ORDER_STATUS_FILTER_OPTIONS = [
@@ -144,7 +151,7 @@ const PosOrderPage = () => {
     const connection = new HubConnectionBuilder().withUrl(getHubUrl()).withAutomaticReconnect().build();
 
     connection.on('OrderQueued', (order: Order) => {
-      setOrders((prev) => sortOrdersByCreatedAt([...prev, order]));
+      setOrders((prev) => addOrderIfMissing(prev, order));
     });
 
     connection.on('OrderStatusUpdated', (payload: { id: string; status: string }) => {
@@ -226,7 +233,7 @@ const PosOrderPage = () => {
     setIsSubmitting(true);
     try {
       const { data: created } = await api.post<Order>('/orders', request);
-      setOrders((prev) => sortOrdersByCreatedAt([...prev, created]));
+      setOrders((prev) => addOrderIfMissing(prev, created));
 
       setCart({});
       setCustomerName('');
@@ -422,10 +429,7 @@ const KitchenBoard = () => {
     const connection = new HubConnectionBuilder().withUrl(getHubUrl()).withAutomaticReconnect().build();
 
     connection.on('OrderQueued', (order: Order) => {
-      setOrders((prev) => {
-        const next = [...prev, order];
-        return next.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      });
+      setOrders((prev) => addOrderIfMissing(prev, order));
     });
 
     connection.on('OrderStatusUpdated', (payload: { id: string; status: string }) => {
