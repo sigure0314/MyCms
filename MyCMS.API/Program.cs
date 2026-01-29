@@ -66,26 +66,40 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
-// 5. CORS (Allow Frontend)
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+// 5. CORS (合併本地與雲端設定)
+// 讀取 appsettings.json 的陣列
+var fromJson = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+// 讀取 Render 的環境變數字串 (用大寫底線區隔)
+var fromEnv = builder.Configuration["ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+
+// 合併並清理網址格式
+var allowedOrigins = fromJson.Concat(fromEnv)
+                    .Select(o => o.Trim().TrimEnd('/'))
+                    .Distinct()
+                    .ToArray();
+
+// 這行一定要加！這樣你在 Render Logs 才能百分之百確認變數有沒有讀到
+Console.WriteLine($"[CORS INFO] 啟用的白名單網域: {string.Join(", ", allowedOrigins)}");
+
 builder.Services.AddCors(opt => opt.AddPolicy("AllowConfiguredOrigins", policy =>
     policy.SetIsOriginAllowed(origin =>
-        {
-            // 明確允許清單
-            if (allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
-                return true;
+    {
+        var cleanOrigin = origin.TrimEnd('/');
+        
+        // 1. 檢查合併後的名單 (包含你的新網域 sigurelee.idv.tw)
+        if (allowedOrigins.Any(o => o.Equals(cleanOrigin, StringComparison.OrdinalIgnoreCase)))
+            return true;
 
-            // 允許所有 Vercel 站台（含 Preview）
-            if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
-                return uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
+        // 2. 依然保留對所有 Vercel 預覽網址的支援
+        if (Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+            return uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase);
 
-            return false;
-        })
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-        .AllowCredentials()));
-
-
+        return false;
+    })
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .AllowCredentials()));
 builder.Services.AddHttpClient<IGeminiClient, GeminiClient>();
 builder.Services.AddHttpClient<IImageGenerator, GoogleImagenGenerator>();
 builder.Services.Configure<InstagramGraphApiOptions>(
