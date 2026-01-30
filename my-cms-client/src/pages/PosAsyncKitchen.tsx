@@ -2,20 +2,11 @@ import { Route, Routes } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import { v4 as uuidv4 } from 'uuid';
-import api from '../services/api';
+import api, { getApiBaseUrl } from '../services/api';
 import type { CreateOrderRequest, MenuItem, Order } from '../types/posAsyncKitchen';
 import './PosAsyncKitchen.css';
 
-const normalizeApiBaseUrl = (value: string | undefined) => {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return '/api';
-  }
-
-  return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
-};
-
-const API_BASE_URL = normalizeApiBaseUrl(api.defaults.baseURL);
+const API_BASE_URL = getApiBaseUrl();
 const FALLBACK_STORAGE_KEY = 'posAsyncKitchenOrders';
 
 const fallbackOrders: Order[] = [

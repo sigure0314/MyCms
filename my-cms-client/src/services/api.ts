@@ -147,13 +147,26 @@ export interface FramePlaylistUpdateRequest {
 // 2. 設定 Base URL
 // 建議：正式開發時將 URL 放到 .env 檔案 (例如 import.meta.env.VITE_API_URL)
 // 先以環境變數為主，沒有設定時維持你原本的 dev URL
-const BASE_URL =
-  import.meta.env.VITE_API_URL ??
-  'https://ideal-goggles-rwvj9vg75qph54gg-5250.app.github.dev/api';
+export const normalizeApiBaseUrl = (value: string | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return '/api';
+  }
+
+  return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+};
+
+const FALLBACK_BASE_URL = import.meta.env.PROD
+  ? '/api'
+  : 'https://ideal-goggles-rwvj9vg75qph54gg-5250.app.github.dev/api';
+
+const BASE_URL = import.meta.env.VITE_API_URL ?? FALLBACK_BASE_URL;
 
 const axiosInstance = axios.create({ 
     baseURL: BASE_URL 
 });
+
+export const getApiBaseUrl = () => normalizeApiBaseUrl(axiosInstance.defaults.baseURL);
 
 let pendingRequests = 0;
 
