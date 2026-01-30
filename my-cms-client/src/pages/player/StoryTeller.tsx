@@ -3,7 +3,7 @@ import { useParams, useSearchParams} from 'react-router-dom';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import { Button, Card, Spin, Typography, Row, Col, Modal, message } from 'antd';
 import { LeftOutlined, RightOutlined, RollbackOutlined, QrcodeOutlined, CopyOutlined } from '@ant-design/icons';
-import api from '../../services/api';
+import api, { getApiBaseUrl } from '../../services/api';
 
 // 引入剛建立的 CSS
 import './StoryTeller.css';
@@ -62,7 +62,9 @@ export default function StoryTeller() {
 
     // ⚠️ 請確認這裡的網址是你的後端 Public URL
     // 如果 api.defaults.baseURL 設定正確，可以用：
-    const hubUrl = `${api.defaults.baseURL?.replace('/api', '')}/storyHub`;
+    const apiBaseUrl = getApiBaseUrl();
+    const hubBaseUrl = apiBaseUrl.endsWith('/api') ? apiBaseUrl.slice(0, -4) : apiBaseUrl;
+    const hubUrl = `${hubBaseUrl}/storyHub`;
     
     // 如果 Codespaces 環境一直連不上，請暫時用寫死的測試：
     // const hubUrl = "https://你的後端網址-5250.app.github.dev/storyHub";
