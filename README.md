@@ -1,6 +1,6 @@
 # MyCms# MyCms
 ---
-# MyCms - 營運管理系統 (Enterprise Management Platform)
+# MyCms
 
 ## 🚀 專案概述
 
