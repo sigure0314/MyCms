@@ -9,19 +9,23 @@ using MyCMS.API.Data;
 using MyCMS.API.Services;
 using MyCMS.API.Hubs;
 
-// --- 修正開始：調整 WebApplicationBuilder 避免 inotify 錯誤 ---
+// --- 徹底修正 inotify 限制的終極方案 ---
+// 在所有初始化之前，強制關閉全域配置監控
+Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "false");
+Environment.SetEnvironmentVariable("ASPNETCORE_hostBuilder__reloadConfigOnChange", "false");
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = Directory.GetCurrentDirectory()
 });
 
-// 核心修正：清除預設來源，改用不監控變更 (reloadOnChange: false) 的方式載入
+// 手動清除預設來源，改用不監控變更的方式載入
 builder.Configuration.Sources.Clear();
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
-    .AddEnvironmentVariables(); // Render 的環境變數必加，且不佔用 inotify
+    .AddEnvironmentVariables();
 // --- 修正結束 ---
 
 var supabaseUrl = builder.Configuration["Supabase:Url"];
