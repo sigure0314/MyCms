@@ -41,7 +41,14 @@ const LiveKitSupport = () => {
       messageApi.success('已建立客服房間連線，請允許瀏覽器使用麥克風與鏡頭。');
     } catch (error) {
       console.error(error);
-      messageApi.error('無法建立 LiveKit 房間連線，請稍後再試。');
+      const detailMessage =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
+          ? (error as { response: { data: { detail: string } } }).response.data.detail
+          : null;
+      messageApi.error(detailMessage ?? '無法建立 LiveKit 房間連線，請稍後再試。');
     } finally {
       setLoading(false);
     }

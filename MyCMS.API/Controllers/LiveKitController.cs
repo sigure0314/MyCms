@@ -26,9 +26,7 @@ public class LiveKitController : ControllerBase
     [HttpPost("token")]
     public ActionResult<LiveKitTokenResponse> CreateToken([FromBody] LiveKitTokenRequest request)
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey) ||
-            string.IsNullOrWhiteSpace(_options.ApiSecret) ||
-            string.IsNullOrWhiteSpace(_options.Url))
+        if (IsMissingConfiguration(_options.ApiKey, _options.ApiSecret, _options.Url))
         {
             return Problem("LiveKit 設定尚未完成，請確認 appsettings.json 內的 LiveKit 區塊。", statusCode: StatusCodes.Status500InternalServerError);
         }
@@ -73,5 +71,15 @@ public class LiveKitController : ControllerBase
 
         var jwt = new JwtSecurityTokenHandler().WriteToken(token);
         return Ok(new LiveKitTokenResponse(jwt, _options.Url, roomName, participantName));
+    }
+
+    private static bool IsMissingConfiguration(string? apiKey, string? apiSecret, string? url)
+    {
+        return string.IsNullOrWhiteSpace(apiKey) ||
+            string.IsNullOrWhiteSpace(apiSecret) ||
+            string.IsNullOrWhiteSpace(url) ||
+            apiKey.Contains("YOUR_LIVEKIT_API_KEY", StringComparison.OrdinalIgnoreCase) ||
+            apiSecret.Contains("YOUR_LIVEKIT_API_SECRET", StringComparison.OrdinalIgnoreCase) ||
+            url.Contains("your-livekit-domain", StringComparison.OrdinalIgnoreCase);
     }
 }
