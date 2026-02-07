@@ -144,6 +144,18 @@ export interface FramePlaylistUpdateRequest {
   items: FramePlaylistItemOrder[];
 }
 
+export interface LiveKitTokenRequest {
+  roomName: string;
+  participantName?: string;
+}
+
+export interface LiveKitTokenResponse {
+  token: string;
+  serverUrl: string;
+  roomName: string;
+  participantName: string;
+}
+
 // 2. 設定 Base URL
 // 建議：正式開發時將 URL 放到 .env 檔案 (例如 import.meta.env.VITE_API_URL)
 // 先以環境變數為主，沒有設定時維持你原本的 dev URL
@@ -329,6 +341,9 @@ const api = {
   },
   deleteFrameItem: (id: string) => {
     return axiosInstance.delete<FramePlaylistAdminResponse>(`/frame/items/${id}`);
+  },
+  createLiveKitToken: (data: LiveKitTokenRequest) => {
+    return axiosInstance.post<LiveKitTokenResponse>('/livekit/token', data);
   }
 };
 

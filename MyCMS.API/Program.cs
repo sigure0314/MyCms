@@ -108,6 +108,7 @@ builder.Services.AddHttpClient<InstagramGraphApiService>();
 builder.Services.AddScoped<StoryService>();
 builder.Services.Configure<RedisOptions>(builder.Configuration.GetSection("Redis"));
 builder.Services.AddSingleton<IOnlineUserTracker, OnlineUserTracker>();
+builder.Services.Configure<LiveKitOptions>(builder.Configuration.GetSection("LiveKit"));
 
 var app = builder.Build();
 

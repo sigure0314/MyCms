@@ -19,6 +19,7 @@ import RolePermissions from './pages/users/permissions/RolePermissions';
 import UserRoleAssignments from './pages/users/permissions/UserRoleAssignments';
 import YoutubeComments from './pages/marketing/YoutubeComments';
 import InstagramPosts from './pages/marketing/InstagramPosts';
+import LiveKitSupport from './pages/support/LiveKitSupport';
 
 // ✨ 匯入新頁面
 import BookManagement from './pages/library/BookManagement';
@@ -107,6 +108,12 @@ const App = () => {
           <Route
             path="/marketing/instagram-posts"
             element={<PermissionRoute path="/marketing/instagram-posts" element={<InstagramPosts />} />}
+          />
+
+          {/* 線上客服 */}
+          <Route
+            path="/support/livekit"
+            element={<PermissionRoute path="/support/livekit" element={<LiveKitSupport />} />}
           />
           
           {/* ✨ AI 圖書系統區 */}

@@ -101,6 +101,11 @@ const MainLayout: React.FC = () => {
       ],
     },
     {
+      key: '/support/livekit',
+      icon: <CustomerServiceOutlined />,
+      label: '線上客服',
+    },
+    {
       key: 'sub-library',
       icon: <ReadOutlined />,
       label: 'AI 圖書系統',
