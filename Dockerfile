@@ -26,9 +26,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# 設定 Render 需要的 Port (Render 預設 Port 環境變數，但 .NET 需明確指定)
-ENV ASPNETCORE_HTTP_PORTS=8080
+# Render 會注入 PORT，且必須監聽在 0.0.0.0 才能被健康檢查掃描到。
+# 若未提供 PORT，預設使用 8080 方便本地容器測試。
 EXPOSE 8080
 
-# 啟動點 (名稱必須對應你的 Project Name)
-ENTRYPOINT ["dotnet", "MyCMS.API.dll"]
+# 啟動時動態綁定到 0.0.0.0:${PORT:-8080}
+ENTRYPOINT ["sh", "-c", "ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080} dotnet MyCMS.API.dll"]
