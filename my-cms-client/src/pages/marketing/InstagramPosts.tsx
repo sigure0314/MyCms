@@ -25,6 +25,7 @@ import type { InstagramPost, InstagramPostStatus } from '../../services/api';
 
 const { TextArea } = Input;
 const { Text } = Typography;
+const DEFAULT_CREATE_STATUS: InstagramPostStatus = 'PendingReview';
 
 const statusOptions: { label: string; value: InstagramPostStatus; color: string }[] = [
   { label: '待審核', value: 'PendingReview', color: 'gold' },
@@ -40,7 +41,6 @@ const InstagramPosts: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [statusDrafts, setStatusDrafts] = useState<Record<number, InstagramPostStatus>>({});
   const [scheduleDrafts, setScheduleDrafts] = useState<Record<number, Dayjs | null>>({});
-  const statusValue = Form.useWatch('status', form) as InstagramPostStatus | undefined;
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -69,12 +69,6 @@ const InstagramPosts: React.FC = () => {
     setScheduleDrafts(nextScheduleDrafts);
   }, [posts]);
 
-  useEffect(() => {
-    if (statusValue !== 'Approved') {
-      form.setFieldsValue({ scheduledAt: undefined });
-    }
-  }, [form, statusValue]);
-
   const statusMap = useMemo(() => {
     return statusOptions.reduce<Record<string, { label: string; color: string }>>((acc, option) => {
       acc[option.value] = { label: option.label, color: option.color };
@@ -82,7 +76,7 @@ const InstagramPosts: React.FC = () => {
     }, {});
   }, []);
 
-  const handleSubmit = async (values: { caption: string; status: InstagramPostStatus; scheduledAt?: Dayjs }) => {
+  const handleSubmit = async (values: { caption: string }) => {
     const imageFile = fileList[0]?.originFileObj;
 
     if (!imageFile) {
@@ -92,10 +86,7 @@ const InstagramPosts: React.FC = () => {
 
     const formData = new FormData();
     formData.append('caption', values.caption);
-    formData.append('status', values.status);
-    if (values.status === 'Approved' && values.scheduledAt) {
-      formData.append('scheduledAt', values.scheduledAt.toISOString());
-    }
+    formData.append('status', DEFAULT_CREATE_STATUS);
     formData.append('image', imageFile);
 
     try {
@@ -208,7 +199,7 @@ const InstagramPosts: React.FC = () => {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ status: 'PendingReview' }}
+          initialValues={{ status: DEFAULT_CREATE_STATUS }}
         >
           <Row gutter={16}>
             <Col xs={24} lg={14}>
@@ -244,15 +235,15 @@ const InstagramPosts: React.FC = () => {
                 </Upload>
               </Form.Item>
               <Form.Item label="狀態" name="status">
-                <Select options={statusOptions.map(option => ({ label: option.label, value: option.value }))} />
+                <Select
+                  disabled
+                  options={statusOptions
+                    .filter(option => option.value === DEFAULT_CREATE_STATUS)
+                    .map(option => ({ label: option.label, value: option.value }))}
+                />
               </Form.Item>
-              {statusValue === 'Approved' && (
-                <Form.Item label="預定發佈時間" name="scheduledAt">
-                  <DatePicker showTime style={{ width: '100%' }} placeholder="選擇發布時間" />
-                </Form.Item>
-              )}
               <Text type="secondary">
-                審核通過後可安排發布時間，若未選擇時間將直接發佈。
+                新建立的貼文狀態固定為待審核，請至下方貼文管理區進行審核與發布設定。
               </Text>
               <Form.Item>
                 <Button type="primary" htmlType="submit">
