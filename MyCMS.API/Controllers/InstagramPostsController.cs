@@ -82,42 +82,18 @@ public class InstagramPostsController : ControllerBase
             .From(_bucketName)
             .Upload(imageBytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
 
-        var requestedStatus = request.Status ?? InstagramPostStatus.PendingReview;
-        if (requestedStatus == InstagramPostStatus.Published)
-        {
-            requestedStatus = InstagramPostStatus.Approved;
-        }
-        var scheduledAt = request.ScheduledAt?.ToUniversalTime();
-        if (requestedStatus != InstagramPostStatus.Approved && requestedStatus != InstagramPostStatus.Published)
-        {
-            scheduledAt = null;
-        }
-
         var post = new InstagramPost
         {
             Caption = request.Caption,
             ImagePath = fileName,
-            Status = requestedStatus,
+            Status = InstagramPostStatus.PendingReview,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            ScheduledAt = scheduledAt
+            ScheduledAt = null
         };
 
         _context.InstagramPosts.Add(post);
         await _context.SaveChangesAsync();
-
-        if (post.Status == InstagramPostStatus.Approved && IsReadyToPublish(post.ScheduledAt))
-        {
-            var publishResult = await TryPublishAsync(post);
-            if (!publishResult.Success)
-            {
-                post.Status = InstagramPostStatus.PendingReview;
-                post.ScheduledAt = null;
-                post.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-                return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
-            }
-        }
 
         return CreatedAtAction(nameof(GetPost), new { id = post.Id }, MapToDto(post));
     }
