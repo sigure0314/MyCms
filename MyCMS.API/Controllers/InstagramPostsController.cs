@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using Microsoft.Extensions.Options;
 using MyCMS.API.Data;
 using MyCMS.API.DTOs;
 using MyCMS.API.Models;
@@ -14,19 +16,25 @@ namespace MyCMS.API.Controllers;
 public class InstagramPostsController : ControllerBase
 {
     private readonly AppDbContext _context;
-    private readonly InstagramGraphApiService _instagramGraphApiService;
+    private readonly InstagramPublishJobService _instagramPublishJobService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly InstagramPublishOptions _instagramPublishOptions;
     private readonly Supabase.Client _supabase;
     private readonly string _supabaseUrl;
     private readonly string _bucketName;
 
     public InstagramPostsController(
         AppDbContext context,
-        InstagramGraphApiService instagramGraphApiService,
+        InstagramPublishJobService instagramPublishJobService,
+        IBackgroundJobClient backgroundJobClient,
         Supabase.Client supabase,
-        IConfiguration config)
+        IConfiguration config,
+        IOptions<InstagramPublishOptions> instagramPublishOptions)
     {
         _context = context;
-        _instagramGraphApiService = instagramGraphApiService;
+        _instagramPublishJobService = instagramPublishJobService;
+        _backgroundJobClient = backgroundJobClient;
+        _instagramPublishOptions = instagramPublishOptions.Value;
         _supabase = supabase;
         _supabaseUrl = config["Supabase:Url"] ?? string.Empty;
         _bucketName = config["Supabase:InstagramBucketName"] ?? "instagram";
@@ -109,6 +117,7 @@ public class InstagramPostsController : ControllerBase
         }
 
         var previousStatus = post.Status;
+        var shouldSchedulePublishJob = false;
 
         if (!string.IsNullOrWhiteSpace(request.Caption))
         {
@@ -130,17 +139,8 @@ public class InstagramPostsController : ControllerBase
                     break;
                 case InstagramPostStatus.Approved:
                     post.Status = InstagramPostStatus.Approved;
-                    post.ScheduledAt = request.ScheduledAt?.ToUniversalTime();
-                    if (IsReadyToPublish(post.ScheduledAt))
-                    {
-                        var publishResult = await TryPublishAsync(post);
-                        if (!publishResult.Success)
-                        {
-                            post.Status = InstagramPostStatus.PendingReview;
-                            post.ScheduledAt = null;
-                            return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
-                        }
-                    }
+                    post.ScheduledAt = GetScheduledAt(request.ScheduledAt);
+                    shouldSchedulePublishJob = true;
                     break;
                 case InstagramPostStatus.Published:
                     if (previousStatus == InstagramPostStatus.Published)
@@ -153,12 +153,12 @@ public class InstagramPostsController : ControllerBase
                         return BadRequest("請先審核通過後再發佈。");
                     }
 
-                    var manualPublishResult = await TryPublishAsync(post);
-                    if (!manualPublishResult.Success)
+                    var manualPublishResult = await _instagramPublishJobService.PublishPostAsync(post.Id);
+                    if (!manualPublishResult)
                     {
                         post.Status = InstagramPostStatus.PendingReview;
                         post.ScheduledAt = null;
-                        return StatusCode(StatusCodes.Status502BadGateway, manualPublishResult.ErrorMessage);
+                        return StatusCode(StatusCodes.Status502BadGateway, "Instagram 發佈失敗。請稍後再試。");
                     }
                     break;
                 default:
@@ -169,21 +169,17 @@ public class InstagramPostsController : ControllerBase
         }
         else if (request.ScheduledAt.HasValue && post.Status == InstagramPostStatus.Approved)
         {
-            post.ScheduledAt = request.ScheduledAt?.ToUniversalTime();
-            if (IsReadyToPublish(post.ScheduledAt))
-            {
-                var publishResult = await TryPublishAsync(post);
-                if (!publishResult.Success)
-                {
-                    post.Status = InstagramPostStatus.PendingReview;
-                    post.ScheduledAt = null;
-                    return StatusCode(StatusCodes.Status502BadGateway, publishResult.ErrorMessage);
-                }
-            }
+            post.ScheduledAt = GetScheduledAt(request.ScheduledAt);
+            shouldSchedulePublishJob = true;
         }
 
         post.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        if (shouldSchedulePublishJob)
+        {
+            SchedulePublishJob(post.Id, post.ScheduledAt);
+        }
 
         return Ok(MapToDto(post));
     }
@@ -203,26 +199,28 @@ public class InstagramPostsController : ControllerBase
         };
     }
 
-    private bool IsReadyToPublish(DateTime? scheduledAt)
+    private DateTime GetScheduledAt(DateTime? requestScheduledAt)
     {
-        return !scheduledAt.HasValue || scheduledAt.Value <= DateTime.UtcNow;
-    }
-
-    private async Task<(bool Success, string? ErrorMessage)> TryPublishAsync(InstagramPost post)
-    {
-        var imageUrl = BuildImageUrl(post.ImagePath);
-        var publishResult = await _instagramGraphApiService.PublishAsync(imageUrl, post.Caption, HttpContext.RequestAborted);
-        if (!publishResult.Success)
+        if (requestScheduledAt.HasValue)
         {
-            return (false, publishResult.ErrorMessage);
+            return requestScheduledAt.Value.ToUniversalTime();
         }
 
-        post.Status = InstagramPostStatus.Published;
-        post.PublishedAt ??= DateTime.UtcNow;
-        post.UpdatedAt = DateTime.UtcNow;
-        post.ScheduledAt = null;
-        await _context.SaveChangesAsync();
-        return (true, null);
+        return DateTime.UtcNow.AddMinutes(_instagramPublishOptions.DefaultDelayMinutes);
+    }
+
+    private void SchedulePublishJob(int postId, DateTime? scheduledAt)
+    {
+        var enqueueAt = scheduledAt ?? DateTime.UtcNow.AddMinutes(_instagramPublishOptions.DefaultDelayMinutes);
+        if (enqueueAt <= DateTime.UtcNow)
+        {
+            _backgroundJobClient.Enqueue<InstagramPublishJobService>(service => service.PublishPostAsync(postId));
+            return;
+        }
+
+        _backgroundJobClient.Schedule<InstagramPublishJobService>(
+            service => service.PublishPostAsync(postId),
+            enqueueAt - DateTime.UtcNow);
     }
 
     private string BuildImageUrl(string? imagePath)
