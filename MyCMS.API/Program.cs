@@ -1,4 +1,6 @@
 using System.Text;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +52,17 @@ if (string.IsNullOrWhiteSpace(kitchenConnectionString)) {
     builder.Services.AddDbContext<KitchenDbContext>(opt =>
         opt.UseNpgsql(kitchenConnectionString));
 }
+
+var hangfireConnectionString = kitchenConnectionString ?? throw new InvalidOperationException("DefaultConnection 未設定，無法啟用 Hangfire。");
+
+builder.Services.AddHangfire(config =>
+{
+    config.UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(options =>
+            options.UseNpgsqlConnection(hangfireConnectionString));
+});
+builder.Services.AddHangfireServer();
 
 builder.Services.AddScoped<Supabase.Client>(_ => 
     new Supabase.Client(supabaseUrl, supabaseKey, new Supabase.SupabaseOptions
@@ -117,6 +130,8 @@ builder.Services.AddHttpClient<IGeminiClient, GeminiClient>();
 builder.Services.AddHttpClient<IImageGenerator, GoogleImagenGenerator>();
 builder.Services.Configure<InstagramGraphApiOptions>(builder.Configuration.GetSection("InstagramGraphApi"));
 builder.Services.AddHttpClient<InstagramGraphApiService>();
+builder.Services.AddScoped<InstagramPublishJobService>();
+builder.Services.Configure<InstagramPublishOptions>(builder.Configuration.GetSection("InstagramPublish"));
 builder.Services.AddScoped<StoryService>();
 builder.Services.Configure<RedisOptions>(builder.Configuration.GetSection("Redis"));
 builder.Services.AddSingleton<IOnlineUserTracker, OnlineUserTracker>();
@@ -138,6 +153,7 @@ app.UseStaticFiles();
 app.UseCors("AllowConfiguredOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseHangfireDashboard("/hangfire");
 app.MapControllers();
 app.MapHub<StoryHub>("/storyHub");
 app.MapHub<OrdersHub>("/hubs/orders");
