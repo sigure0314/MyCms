@@ -8,8 +8,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MyCMS.API.Authorization;
 using MyCMS.API.Data;
-using MyCMS.API.Services;
 using MyCMS.API.Hubs;
+using MyCMS.API.Services;
+using Serilog;
 
 // --- 徹底修正 inotify 限制的終極方案 ---
 // 在所有初始化之前，強制關閉全域配置監控
@@ -29,6 +30,26 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false)
     .AddEnvironmentVariables();
 // --- 修正結束 ---
+
+builder.Host.UseSerilog((context, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
+
+    var sourceToken = context.Configuration["BetterStack:SourceToken"];
+    if (!string.IsNullOrWhiteSpace(sourceToken))
+    {
+        loggerConfiguration.WriteTo.BetterStack(sourceToken);
+
+        var sourceId = context.Configuration["BetterStack:SourceId"];
+        if (!string.IsNullOrWhiteSpace(sourceId))
+        {
+            loggerConfiguration.Enrich.WithProperty("BetterStackSourceId", sourceId);
+        }
+    }
+});
 
 var supabaseUrl = builder.Configuration["Supabase:Url"];
 var supabaseKey = builder.Configuration["Supabase:Key"];
@@ -138,6 +159,8 @@ builder.Services.AddSingleton<IOnlineUserTracker, OnlineUserTracker>();
 builder.Services.Configure<LiveKitOptions>(builder.Configuration.GetSection("LiveKit"));
 
 var app = builder.Build();
+
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
