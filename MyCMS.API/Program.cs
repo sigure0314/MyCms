@@ -9,6 +9,7 @@ using Microsoft.OpenApi.Models;
 using MyCMS.API.Authorization;
 using MyCMS.API.Data;
 using MyCMS.API.Hubs;
+using MyCMS.API.Middleware;
 using MyCMS.API.Services;
 using Serilog;
 
@@ -176,6 +177,7 @@ app.UseStaticFiles();
 app.UseCors("AllowConfiguredOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<HttpMutationLoggingMiddleware>();
 app.UseHangfireDashboard("/hangfire");
 app.MapControllers();
 app.MapHub<StoryHub>("/storyHub");
