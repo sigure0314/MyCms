@@ -1,8 +1,9 @@
 using System.Diagnostics;
+using Serilog;
 
 namespace MyCMS.API.Middleware;
 
-public class HttpMutationLoggingMiddleware(RequestDelegate next, ILogger<HttpMutationLoggingMiddleware> logger)
+public class HttpMutationLoggingMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -20,13 +21,12 @@ public class HttpMutationLoggingMiddleware(RequestDelegate next, ILogger<HttpMut
             ? context.User.Identity?.Name ?? "(authenticated)"
             : "anonymous";
 
-        logger.LogInformation(
-            "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMilliseconds} ms (User: {User}, IP: {RemoteIp})",
-            context.Request.Method,
-            context.Request.Path,
-            context.Response.StatusCode,
-            stopwatch.ElapsedMilliseconds,
-            userName,
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        Log.ForContext("HttpMethod", context.Request.Method)
+            .ForContext("RequestPath", context.Request.Path.ToString())
+            .ForContext("StatusCode", context.Response.StatusCode)
+            .ForContext("ElapsedMilliseconds", stopwatch.ElapsedMilliseconds)
+            .ForContext("User", userName)
+            .ForContext("RemoteIp", context.Connection.RemoteIpAddress?.ToString() ?? "unknown")
+            .Information("HTTP mutation request completed");
     }
 }
