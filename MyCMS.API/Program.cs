@@ -180,6 +180,7 @@ app.UseAuthorization();
 app.UseMiddleware<HttpMutationLoggingMiddleware>();
 app.UseHangfireDashboard("/hangfire");
 app.MapControllers();
+app.MapGet("/api/ping", () => Results.Ok("pong"));
 app.MapHub<StoryHub>("/storyHub");
 app.MapHub<OrdersHub>("/hubs/orders");
 app.MapFallbackToFile("index.html");
