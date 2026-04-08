@@ -20,7 +20,7 @@ public class OnlineUsersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = "Permission:api.users.get")]
+    [AllowAnonymous]
     public async Task<ActionResult<IReadOnlyList<OnlineUserDto>>> GetOnlineUsers()
     {
         var users = await _onlineUserTracker.GetOnlineUsersAsync();

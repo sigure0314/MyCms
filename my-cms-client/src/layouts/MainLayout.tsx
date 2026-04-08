@@ -215,9 +215,13 @@ const MainLayout: React.FC = () => {
       </Sider>
       <Layout>
         <Header style={{ padding: '0 20px', background: colorBgContainer, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-          <Button icon={<LogoutOutlined />} onClick={authService.logout}>
-            登出
-          </Button>
+          {authService.isAuthenticated() ? (
+            <Button icon={<LogoutOutlined />} onClick={authService.logout}>
+              登出
+            </Button>
+          ) : (
+            <Button onClick={() => navigate('/login')}>登入</Button>
+          )}
         </Header>
         <Content style={{ margin: '24px 16px 0' }}>
           <div style={{ padding: 24, minHeight: 360, background: colorBgContainer, borderRadius: borderRadiusLG }}>

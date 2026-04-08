@@ -5,7 +5,6 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import MainLayout from './layouts/MainLayout';
-import ProtectedRoute from './components/ProtectedRoute';
 import PermissionRoute from './components/PermissionRoute';
 
 // 匯入新頁面
@@ -51,7 +50,6 @@ const App = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route element={<ProtectedRoute />}>
         <Route
           path="/pos-async-kitchen/*"
           element={<PermissionRoute path="/pos-async-kitchen" element={<PosAsyncKitchen />} />}
@@ -148,7 +146,6 @@ const App = () => {
           */}
           
         </Route>
-      </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

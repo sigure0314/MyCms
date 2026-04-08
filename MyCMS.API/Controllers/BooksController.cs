@@ -8,7 +8,7 @@ namespace MyCMS.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize] // 鎖定只有登入的使用者才能存取
+[Authorize] // 只有需要權限的操作才需登入
 public class BooksController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -28,7 +28,7 @@ public class BooksController : ControllerBase
 
     // GET: api/Books
     [HttpGet]
-    [Authorize(Policy = "Permission:api.books.get")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<Book>>> GetBooks()
     {
         // 1. 從資料庫撈取資料，並包含關聯的 Pages

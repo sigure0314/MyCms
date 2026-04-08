@@ -24,14 +24,14 @@ public class OrdersController : ControllerBase {
     }
 
     [HttpGet("menu")]
-    [Authorize(Policy = "Permission:api.orders.menu")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<MenuItem>>> GetMenu() {
         var menu = await _menuService.GetMenuAsync();
         return Ok(menu);
     }
 
     [HttpGet]
-    [Authorize(Policy = "Permission:api.orders.get")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<Order>>> GetOrders() {
         var orders = await _repository.GetOrdersAsync();
         return Ok(orders);

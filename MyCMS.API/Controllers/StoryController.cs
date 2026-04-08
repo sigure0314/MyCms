@@ -59,7 +59,7 @@ public class StoryController : ControllerBase
 
     // 新增：根據 ID 取得故事內容 (GET: api/story/1)
     [HttpGet("{id}")]
-    [Authorize(Policy = "Permission:api.story.get")]
+    [AllowAnonymous]
     public IActionResult GetStory(int id)
     {
         // TODO: 這裡應該要從資料庫 _context.Books.Include(b => b.Pages).FirstOrDefault(b => b.Id == id);
