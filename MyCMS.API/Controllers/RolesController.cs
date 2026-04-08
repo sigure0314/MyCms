@@ -18,7 +18,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpGet]
-    [Authorize(Policy = "Permission:api.roles.get")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<RoleResponse>>> GetRoles() {
         var roles = await _context.Roles
             .Select(r => new {
@@ -96,7 +96,7 @@ public class RolesController : ControllerBase {
     }
 
     [HttpGet("{id:int}/permissions")]
-    [Authorize(Policy = "Permission:api.roles.permissions.get")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<int>>> GetRolePermissions(int id) {
         var role = await _context.Roles
             .Include(r => r.RolePermissions)

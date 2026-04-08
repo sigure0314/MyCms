@@ -41,7 +41,7 @@ public class InstagramPostsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = "Permission:api.instagram.get")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<InstagramPostDto>>> GetPosts()
     {
         var posts = await _context.InstagramPosts
@@ -53,7 +53,7 @@ public class InstagramPostsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [Authorize(Policy = "Permission:api.instagram.get-one")]
+    [AllowAnonymous]
     public async Task<ActionResult<InstagramPostDto>> GetPost(int id)
     {
         var post = await _context.InstagramPosts.FindAsync(id);

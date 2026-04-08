@@ -8,7 +8,7 @@ namespace MyCMS.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize] // 🔒 加上這行，只有登入的人才能看！
+[Authorize] // 只有需要權限的操作才需登入
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -19,7 +19,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = "Permission:api.users.get")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetUsers()
     {
         // 這裡我們只選取需要的欄位，不要把 PasswordHash 傳給前端，這樣才安全
