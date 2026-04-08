@@ -72,34 +72,42 @@ npm run dev
 本專案採用 **MIT License**。
 
 
-## 📈 Stock Chart Dashboard (New)
+## 📈 Taiwan Stock K-Line Dashboard
 
 ### Backend API
 
-* `GET /api/stocks/{symbol}`
-* 回傳內容包含：`prices` (OHLCV)、`ma5`、`ma20`
-* 目前採用 **Mock historical data**（可延伸接 Yahoo Finance）
+* `GET /api/stocks/{stockNo}`
+* Data source: `https://www.twse.com.tw/exchangeReport/STOCK_DAY`
+* Service fetches the latest 6 months of daily data and maps each item to:
+
+```json
+{
+  "date": "2026-04-01T00:00:00Z",
+  "open": 945.0,
+  "high": 956.0,
+  "low": 938.0,
+  "close": 950.0,
+  "volume": 23888541
+}
+```
+
+* ROC date (e.g. `115/04/01`) is converted to Gregorian date by `year + 1911`.
 
 ### Frontend Dashboard
 
-* Dashboard 頁面整合 TradingView Lightweight Charts（透過 standalone script）
-* 支援：
-  * Candlestick
-  * MA5 / MA20
-  * Volume 子圖
-* Symbol 輸入框預設 `AAPL`，按 `Load` 重新載入歷史資料
+* Dashboard page includes a simple Taiwan stock K-line system.
+* Input default stock number: `2330`.
+* Click **Load** to fetch backend API and render:
+  * Candlestick chart
+  * Volume histogram
 
-### Realtime (Finnhub WebSocket)
-
-前端請設定：
+### Run
 
 ```bash
-# my-cms-client/.env
-VITE_FINNHUB_TOKEN=your_finnhub_token
+# backend
+dotnet run --project MyCMS.API
+
+# frontend
+cd my-cms-client
+npm run dev
 ```
-
-啟動後會：
-
-* 顯示即時最新價
-* 訂閱目前 symbol 的即時成交資料
-* 動態更新最後一根 K 棒 close/high/low

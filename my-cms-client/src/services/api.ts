@@ -150,8 +150,8 @@ export interface LiveKitTokenRequest {
 }
 
 
-export interface StockPricePoint {
-  time: string;
+export interface TaiwanStockKLinePoint {
+  date: string;
   open: number;
   high: number;
   low: number;
@@ -159,16 +159,9 @@ export interface StockPricePoint {
   volume: number;
 }
 
-export interface MovingAveragePoint {
-  time: string;
-  value: number;
-}
-
-export interface StockChartResponse {
-  symbol: string;
-  prices: StockPricePoint[];
-  ma5: MovingAveragePoint[];
-  ma20: MovingAveragePoint[];
+export interface TaiwanStockKLineResponse {
+  stockNo: string;
+  data: TaiwanStockKLinePoint[];
 }
 
 export interface LiveKitTokenResponse {
@@ -371,8 +364,8 @@ const api = {
   createLiveKitToken: (data: LiveKitTokenRequest) => {
     return axiosInstance.post<LiveKitTokenResponse>('/livekit/token', data);
   },
-  getStockChart: (symbol: string) => {
-    return axiosInstance.get<StockChartResponse>(`/stocks/${symbol}`);
+  getStockChart: (stockNo: string) => {
+    return axiosInstance.get<TaiwanStockKLineResponse>(`/stocks/${stockNo}`);
   }
 };
 

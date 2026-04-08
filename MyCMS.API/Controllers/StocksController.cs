@@ -15,15 +15,26 @@ public class StocksController : ControllerBase
         _stockDataService = stockDataService;
     }
 
-    [HttpGet("{symbol}")]
-    public async Task<ActionResult<StockChartResponse>> GetStockChart(string symbol, CancellationToken cancellationToken)
+    [HttpGet("{stockNo}")]
+    public async Task<ActionResult<TaiwanStockKLineResponse>> GetStockChart(string stockNo, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(symbol))
+        if (string.IsNullOrWhiteSpace(stockNo))
         {
-            return BadRequest("Symbol is required.");
+            return BadRequest("Stock number is required.");
         }
 
-        var chart = await _stockDataService.GetStockChartAsync(symbol, cancellationToken);
-        return Ok(chart);
+        try
+        {
+            var chart = await _stockDataService.GetTaiwanStockDailyKLineAsync(stockNo, cancellationToken);
+            return Ok(chart);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { message = $"TWSE request failed: {ex.Message}" });
+        }
     }
 }

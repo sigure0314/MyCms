@@ -1,96 +1,143 @@
+using System.Globalization;
+using System.Text.Json;
 using MyCMS.API.DTOs;
-using MyCMS.API.Models;
 
 namespace MyCMS.API.Services;
 
 public interface IStockDataService
 {
-    Task<StockChartResponse> GetStockChartAsync(string symbol, CancellationToken cancellationToken = default);
+    Task<TaiwanStockKLineResponse> GetTaiwanStockDailyKLineAsync(string stockNo, CancellationToken cancellationToken = default);
 }
 
 public class StockDataService : IStockDataService
 {
-    private const int DefaultPeriods = 120;
+    private const string TwseEndpoint = "https://www.twse.com.tw/exchangeReport/STOCK_DAY";
+    private readonly HttpClient _httpClient;
 
-    public Task<StockChartResponse> GetStockChartAsync(string symbol, CancellationToken cancellationToken = default)
+    public StockDataService(HttpClient httpClient)
     {
-        var normalizedSymbol = string.IsNullOrWhiteSpace(symbol)
-            ? "AAPL"
-            : symbol.Trim().ToUpperInvariant();
-
-        var prices = GenerateMockPrices(normalizedSymbol, DefaultPeriods);
-        var ma5 = CalculateMovingAverage(prices, 5);
-        var ma20 = CalculateMovingAverage(prices, 20);
-
-        var response = new StockChartResponse(
-            normalizedSymbol,
-            prices.Select(p => new StockPricePoint(p.Time, p.Open, p.High, p.Low, p.Close, p.Volume)).ToList(),
-            ma5,
-            ma20
-        );
-
-        return Task.FromResult(response);
+        _httpClient = httpClient;
     }
 
-    private static List<StockPrice> GenerateMockPrices(string symbol, int periods)
+    public async Task<TaiwanStockKLineResponse> GetTaiwanStockDailyKLineAsync(string stockNo, CancellationToken cancellationToken = default)
     {
-        var seed = symbol.Aggregate(17, (current, ch) => current * 31 + ch);
-        var random = new Random(seed);
-        var now = DateTime.UtcNow.Date;
-        var startDate = now.AddDays(-periods - 20);
+        var normalizedStockNo = stockNo.Trim();
+        var today = DateTime.UtcNow;
 
-        var prices = new List<StockPrice>(periods);
-        var lastClose = 140m + (decimal)random.NextDouble() * 60m;
-
-        for (var i = 0; i < periods; i++)
+        var allPoints = new List<TaiwanStockKLinePoint>();
+        for (var monthOffset = 0; monthOffset < 6; monthOffset++)
         {
-            var time = startDate.AddDays(i + 1);
-            var drift = ((decimal)random.NextDouble() - 0.48m) * 4m;
-            var open = Math.Max(1m, lastClose + (((decimal)random.NextDouble() - 0.5m) * 2m));
-            var close = Math.Max(1m, open + drift);
-            var high = Math.Max(open, close) + (decimal)random.NextDouble() * 1.8m;
-            var low = Math.Max(0.5m, Math.Min(open, close) - (decimal)random.NextDouble() * 1.8m);
-            var volume = random.NextInt64(1_200_000, 8_000_000);
+            var month = today.AddMonths(-monthOffset);
+            var rows = await FetchMonthRowsAsync(normalizedStockNo, month, cancellationToken);
 
-            prices.Add(new StockPrice
+            foreach (var row in rows)
             {
-                Time = time,
-                Open = decimal.Round(open, 2),
-                High = decimal.Round(high, 2),
-                Low = decimal.Round(low, 2),
-                Close = decimal.Round(close, 2),
-                Volume = volume
-            });
-
-            lastClose = close;
-        }
-
-        return prices;
-    }
-
-    private static List<MovingAveragePoint> CalculateMovingAverage(IReadOnlyList<StockPrice> prices, int period)
-    {
-        var result = new List<MovingAveragePoint>();
-        if (prices.Count < period)
-        {
-            return result;
-        }
-
-        decimal runningSum = 0m;
-        for (var i = 0; i < prices.Count; i++)
-        {
-            runningSum += prices[i].Close;
-            if (i >= period)
-            {
-                runningSum -= prices[i - period].Close;
-            }
-
-            if (i >= period - 1)
-            {
-                result.Add(new MovingAveragePoint(prices[i].Time, decimal.Round(runningSum / period, 2)));
+                var point = MapRowToKLine(row);
+                if (point is not null)
+                {
+                    allPoints.Add(point);
+                }
             }
         }
 
-        return result;
+        var points = allPoints
+            .GroupBy(x => x.Date)
+            .Select(x => x.First())
+            .OrderBy(x => x.Date)
+            .ToList();
+
+        if (points.Count == 0)
+        {
+            throw new InvalidOperationException($"No TWSE data found for stockNo {normalizedStockNo}.");
+        }
+
+        return new TaiwanStockKLineResponse(normalizedStockNo, points);
+    }
+
+    private async Task<IReadOnlyList<IReadOnlyList<string>>> FetchMonthRowsAsync(string stockNo, DateTime month, CancellationToken cancellationToken)
+    {
+        var date = new DateTime(month.Year, month.Month, 1);
+        var dateParam = date.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+        var url = $"{TwseEndpoint}?response=json&date={dateParam}&stockNo={stockNo}";
+
+        using var response = await _httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+
+        if (!json.RootElement.TryGetProperty("data", out var dataElement) || dataElement.ValueKind != JsonValueKind.Array)
+        {
+            return Array.Empty<IReadOnlyList<string>>();
+        }
+
+        var rows = new List<IReadOnlyList<string>>();
+        foreach (var row in dataElement.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            var values = row.EnumerateArray().Select(x => x.GetString() ?? string.Empty).ToList();
+            rows.Add(values);
+        }
+
+        return rows;
+    }
+
+    private static TaiwanStockKLinePoint? MapRowToKLine(IReadOnlyList<string> row)
+    {
+        if (row.Count < 7 ||
+            !TryParseRocDate(row[0], out var date) ||
+            !TryParseLong(row[1], out var volume) ||
+            !TryParseDecimal(row[3], out var open) ||
+            !TryParseDecimal(row[4], out var high) ||
+            !TryParseDecimal(row[5], out var low) ||
+            !TryParseDecimal(row[6], out var close))
+        {
+            return null;
+        }
+
+        return new TaiwanStockKLinePoint(date, open, high, low, close, volume);
+    }
+
+    private static bool TryParseRocDate(string rocDate, out DateTime date)
+    {
+        date = default;
+        var parts = rocDate.Split('/');
+        if (parts.Length != 3)
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[0], out var rocYear) ||
+            !int.TryParse(parts[1], out var month) ||
+            !int.TryParse(parts[2], out var day))
+        {
+            return false;
+        }
+
+        var gregorianYear = rocYear + 1911;
+        date = new DateTime(gregorianYear, month, day, 0, 0, 0, DateTimeKind.Utc);
+        return true;
+    }
+
+    private static bool TryParseDecimal(string raw, out decimal value)
+    {
+        var cleaned = raw.Replace(",", string.Empty).Trim();
+        if (cleaned is "--" or "X0.00")
+        {
+            value = default;
+            return false;
+        }
+
+        return decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool TryParseLong(string raw, out long value)
+    {
+        var cleaned = raw.Replace(",", string.Empty).Trim();
+        return long.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
     }
 }
