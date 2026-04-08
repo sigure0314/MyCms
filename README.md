@@ -71,3 +71,35 @@ npm run dev
 
 本專案採用 **MIT License**。
 
+
+## 📈 Stock Chart Dashboard (New)
+
+### Backend API
+
+* `GET /api/stocks/{symbol}`
+* 回傳內容包含：`prices` (OHLCV)、`ma5`、`ma20`
+* 目前採用 **Mock historical data**（可延伸接 Yahoo Finance）
+
+### Frontend Dashboard
+
+* Dashboard 頁面整合 TradingView Lightweight Charts（透過 standalone script）
+* 支援：
+  * Candlestick
+  * MA5 / MA20
+  * Volume 子圖
+* Symbol 輸入框預設 `AAPL`，按 `Load` 重新載入歷史資料
+
+### Realtime (Finnhub WebSocket)
+
+前端請設定：
+
+```bash
+# my-cms-client/.env
+VITE_FINNHUB_TOKEN=your_finnhub_token
+```
+
+啟動後會：
+
+* 顯示即時最新價
+* 訂閱目前 symbol 的即時成交資料
+* 動態更新最後一根 K 棒 close/high/low
