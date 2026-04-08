@@ -209,19 +209,23 @@ axiosInstance.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// 4. Response Interceptor: 處理 401 登出
+// 4. Response Interceptor: 僅在「已登入狀態失效」時導回登入頁
 axiosInstance.interceptors.response.use(
     res => {
         stopLoading();
         return res;
-    }, 
+    },
     err => {
         stopLoading();
         const requestUrl = err.config?.url ?? '';
         const isAuthRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/guest');
-        if (err.response && err.response.status === 401 && !isAuthRequest) {
+        const hasToken = Boolean(localStorage.getItem('token'));
+
+        // 未登入訪客遇到 401 不應被強制導到 /login，避免阻斷匿名瀏覽
+        if (err.response && err.response.status === 401 && !isAuthRequest && hasToken) {
             localStorage.removeItem('token');
-            // 這裡建議使用 window.location.href 強制跳轉，確保清除狀態
+            localStorage.removeItem('role');
+            localStorage.removeItem('permissionRoutes');
             window.location.href = '/login';
         }
         return Promise.reject(err);
