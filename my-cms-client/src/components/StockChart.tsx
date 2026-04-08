@@ -1,6 +1,6 @@
 import { Alert, Button, Card, Input, Space, Typography } from 'antd';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import api, { type StockChartResponse } from '../services/api';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import api, { type TaiwanStockKLineResponse } from '../services/api';
 
 declare global {
   interface Window {
@@ -11,11 +11,6 @@ declare global {
   }
 }
 
-type SeriesDataPoint = {
-  time: string;
-  value: number;
-};
-
 type CandleDataPoint = {
   time: string;
   open: number;
@@ -24,45 +19,35 @@ type CandleDataPoint = {
   close: number;
 };
 
-type HistogramDataPoint = SeriesDataPoint & {
+type HistogramDataPoint = {
+  time: string;
+  value: number;
   color?: string;
 };
 
 type SeriesApi<T> = {
   setData: (data: T[]) => void;
-  update: (data: T) => void;
 };
 
 type ChartApi = {
   addCandlestickSeries: (options: Record<string, unknown>) => SeriesApi<CandleDataPoint>;
-  addLineSeries: (options: Record<string, unknown>) => SeriesApi<SeriesDataPoint>;
   addHistogramSeries: (options: Record<string, unknown>) => SeriesApi<HistogramDataPoint>;
-  applyOptions: (options: Record<string, unknown>) => void;
   timeScale: () => { fitContent: () => void };
   remove: () => void;
 };
 
-const FINNHUB_SOCKET_URL = 'wss://ws.finnhub.io';
 const LIGHTWEIGHT_CHART_SCRIPT =
   'https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js';
 
 const StockChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartApi | null>(null);
-  const candleSeriesRef = useRef<SeriesApi<CandleDataPoint> | null>(null);
-  const ma5SeriesRef = useRef<SeriesApi<SeriesDataPoint> | null>(null);
-  const ma20SeriesRef = useRef<SeriesApi<SeriesDataPoint> | null>(null);
-  const volumeSeriesRef = useRef<SeriesApi<HistogramDataPoint> | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
 
-  const [symbolInput, setSymbolInput] = useState('AAPL');
-  const [activeSymbol, setActiveSymbol] = useState('AAPL');
+  const [stockNoInput, setStockNoInput] = useState('2330');
+  const [activeStockNo, setActiveStockNo] = useState('2330');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
-  const [chartData, setChartData] = useState<StockChartResponse | null>(null);
-
-  const finnhubToken = useMemo(() => import.meta.env.VITE_FINNHUB_TOKEN as string | undefined, []);
+  const [chartData, setChartData] = useState<TaiwanStockKLineResponse | null>(null);
 
   const loadChartLibrary = useCallback(async () => {
     if (window.LightweightCharts) {
@@ -97,24 +82,24 @@ const StockChart: React.FC = () => {
     return window.LightweightCharts;
   }, []);
 
-  const fetchStock = useCallback(async (symbol: string) => {
+  const fetchStock = useCallback(async (stockNo: string) => {
     setLoading(true);
     setError(null);
+
     try {
-      const { data } = await api.getStockChart(symbol);
+      const normalizedStockNo = stockNo.trim() || '2330';
+      const { data } = await api.getStockChart(normalizedStockNo);
       setChartData(data);
-      const lastClose = data.prices.at(-1)?.close ?? null;
-      setCurrentPrice(lastClose);
-      setActiveSymbol(symbol.toUpperCase());
+      setActiveStockNo(normalizedStockNo);
     } catch {
-      setError('Failed to load stock history.');
+      setError('Failed to load Taiwan stock K-line data.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void fetchStock('AAPL');
+    void fetchStock('2330');
   }, [fetchStock]);
 
   useEffect(() => {
@@ -127,7 +112,7 @@ const StockChart: React.FC = () => {
 
       chartRef.current?.remove();
       const chart = LightweightCharts.createChart(chartContainerRef.current, {
-        height: 520,
+        height: 560,
         layout: {
           background: { type: LightweightCharts.ColorType.Solid, color: '#ffffff' },
           textColor: '#1f2937',
@@ -137,7 +122,7 @@ const StockChart: React.FC = () => {
           horzLines: { color: '#f2f2f2' },
         },
         rightPriceScale: {
-          scaleMargins: { top: 0.05, bottom: 0.32 },
+          scaleMargins: { top: 0.08, bottom: 0.3 },
         },
       });
 
@@ -149,49 +134,31 @@ const StockChart: React.FC = () => {
         borderVisible: false,
       });
 
-      const ma5 = chart.addLineSeries({ color: '#2563eb', lineWidth: 2 });
-      const ma20 = chart.addLineSeries({ color: '#f59e0b', lineWidth: 2 });
       const volume = chart.addHistogramSeries({
         priceFormat: { type: 'volume' },
         priceScaleId: '',
         color: '#94a3b8',
       });
 
-      const candleData: CandleDataPoint[] = chartData.prices.map((point) => ({
-        time: point.time.slice(0, 10),
+      const candleData: CandleDataPoint[] = chartData.data.map((point) => ({
+        time: point.date.slice(0, 10),
         open: point.open,
         high: point.high,
         low: point.low,
         close: point.close,
       }));
 
-      const ma5Data: SeriesDataPoint[] = chartData.ma5.map((point) => ({
-        time: point.time.slice(0, 10),
-        value: point.value,
-      }));
-
-      const ma20Data: SeriesDataPoint[] = chartData.ma20.map((point) => ({
-        time: point.time.slice(0, 10),
-        value: point.value,
-      }));
-
-      const volumeData: HistogramDataPoint[] = chartData.prices.map((point) => ({
-        time: point.time.slice(0, 10),
+      const volumeData: HistogramDataPoint[] = chartData.data.map((point) => ({
+        time: point.date.slice(0, 10),
         value: point.volume,
-        color: point.close >= point.open ? '#22c55e80' : '#ef444480',
+        color: point.close >= point.open ? '#22c55e88' : '#ef444488',
       }));
 
       candles.setData(candleData);
-      ma5.setData(ma5Data);
-      ma20.setData(ma20Data);
       volume.setData(volumeData);
       chart.timeScale().fitContent();
 
       chartRef.current = chart;
-      candleSeriesRef.current = candles;
-      ma5SeriesRef.current = ma5;
-      ma20SeriesRef.current = ma20;
-      volumeSeriesRef.current = volume;
     };
 
     void renderChart();
@@ -202,88 +169,27 @@ const StockChart: React.FC = () => {
     };
   }, [chartData, loadChartLibrary]);
 
-  useEffect(() => {
-    wsRef.current?.close();
-    wsRef.current = null;
-
-    if (!activeSymbol || !finnhubToken) {
-      return;
-    }
-
-    const socket = new WebSocket(`${FINNHUB_SOCKET_URL}?token=${finnhubToken}`);
-
-    socket.onopen = () => {
-      socket.send(JSON.stringify({ type: 'subscribe', symbol: activeSymbol }));
-    };
-
-    socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data) as { data?: Array<{ p: number; t: number }> };
-      const trade = payload.data?.at(-1);
-      if (!trade) {
-        return;
-      }
-
-      setCurrentPrice(trade.p);
-
-      const candleSeries = candleSeriesRef.current;
-      if (!candleSeries || !chartData?.prices.length) {
-        return;
-      }
-
-      const latestHistorical = chartData.prices[chartData.prices.length - 1];
-      const latestDate = latestHistorical.time.slice(0, 10);
-      candleSeries.update({
-        time: latestDate,
-        open: latestHistorical.open,
-        high: Math.max(latestHistorical.high, trade.p),
-        low: Math.min(latestHistorical.low, trade.p),
-        close: trade.p,
-      });
-    };
-
-    socket.onerror = () => {
-      setError((prev) => prev ?? 'Finnhub websocket disconnected.');
-    };
-
-    wsRef.current = socket;
-
-    return () => {
-      socket.close();
-      wsRef.current = null;
-    };
-  }, [activeSymbol, chartData, finnhubToken]);
-
   return (
-    <Card title="Stock Dashboard" bordered={false}>
+    <Card title="Taiwan Stock K-Line" bordered={false}>
       <Space style={{ marginBottom: 16 }}>
         <Input
           style={{ width: 180 }}
-          value={symbolInput}
-          onChange={(event) => setSymbolInput(event.target.value.toUpperCase())}
-          placeholder="Symbol"
+          value={stockNoInput}
+          onChange={(event) => setStockNoInput(event.target.value)}
+          placeholder="Stock No (e.g. 2330)"
         />
-        <Button type="primary" loading={loading} onClick={() => void fetchStock(symbolInput || 'AAPL')}>
+        <Button type="primary" loading={loading} onClick={() => void fetchStock(stockNoInput)}>
           Load
         </Button>
       </Space>
 
-      <Typography.Title level={4} style={{ marginTop: 0 }}>
-        {activeSymbol} Real-time Price: {currentPrice ? `$${currentPrice.toFixed(2)}` : '--'}
+      <Typography.Title level={5} style={{ marginTop: 0 }}>
+        Stock No: {activeStockNo}
       </Typography.Title>
 
-      {!finnhubToken && (
-        <Alert
-          style={{ marginBottom: 12 }}
-          type="warning"
-          message="Set VITE_FINNHUB_TOKEN in frontend env to enable real-time data."
-        />
-      )}
+      {error && <Alert style={{ marginBottom: 12 }} type="error" message={error} />}
 
-      {error && (
-        <Alert style={{ marginBottom: 12 }} type="error" message={error} />
-      )}
-
-      <div ref={chartContainerRef} style={{ width: '100%', minHeight: 520 }} />
+      <div ref={chartContainerRef} style={{ width: '100%', minHeight: 560 }} />
     </Card>
   );
 };
