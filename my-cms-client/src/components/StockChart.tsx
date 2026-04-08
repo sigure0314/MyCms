@@ -7,6 +7,8 @@ declare global {
     LightweightCharts?: {
       createChart: (container: HTMLElement, options: Record<string, unknown>) => ChartApi;
       ColorType: { Solid: string };
+      CandlestickSeries?: unknown;
+      HistogramSeries?: unknown;
     };
   }
 }
@@ -30,10 +32,53 @@ type SeriesApi<T> = {
 };
 
 type ChartApi = {
-  addCandlestickSeries: (options: Record<string, unknown>) => SeriesApi<CandleDataPoint>;
-  addHistogramSeries: (options: Record<string, unknown>) => SeriesApi<HistogramDataPoint>;
+  addCandlestickSeries?: (options: Record<string, unknown>) => SeriesApi<CandleDataPoint>;
+  addHistogramSeries?: (options: Record<string, unknown>) => SeriesApi<HistogramDataPoint>;
+  addSeries?: <T>(definition: unknown, options: Record<string, unknown>) => SeriesApi<T>;
   timeScale: () => { fitContent: () => void };
   remove: () => void;
+};
+
+const getSeriesFactories = (chart: ChartApi, lightweightCharts: NonNullable<Window['LightweightCharts']>) => {
+  const addCandlestick = () => {
+    const options = {
+      upColor: '#16a34a',
+      downColor: '#dc2626',
+      wickUpColor: '#16a34a',
+      wickDownColor: '#dc2626',
+      borderVisible: false,
+    };
+
+    if (typeof chart.addCandlestickSeries === 'function') {
+      return chart.addCandlestickSeries(options);
+    }
+
+    if (typeof chart.addSeries === 'function' && lightweightCharts.CandlestickSeries) {
+      return chart.addSeries<CandleDataPoint>(lightweightCharts.CandlestickSeries, options);
+    }
+
+    throw new Error('Lightweight Charts does not support candlestick series API.');
+  };
+
+  const addHistogram = () => {
+    const options = {
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+      color: '#94a3b8',
+    };
+
+    if (typeof chart.addHistogramSeries === 'function') {
+      return chart.addHistogramSeries(options);
+    }
+
+    if (typeof chart.addSeries === 'function' && lightweightCharts.HistogramSeries) {
+      return chart.addSeries<HistogramDataPoint>(lightweightCharts.HistogramSeries, options);
+    }
+
+    throw new Error('Lightweight Charts does not support histogram series API.');
+  };
+
+  return { addCandlestick, addHistogram };
 };
 
 const LIGHTWEIGHT_CHART_SCRIPT =
@@ -126,19 +171,9 @@ const StockChart: React.FC = () => {
         },
       });
 
-      const candles = chart.addCandlestickSeries({
-        upColor: '#16a34a',
-        downColor: '#dc2626',
-        wickUpColor: '#16a34a',
-        wickDownColor: '#dc2626',
-        borderVisible: false,
-      });
-
-      const volume = chart.addHistogramSeries({
-        priceFormat: { type: 'volume' },
-        priceScaleId: '',
-        color: '#94a3b8',
-      });
+      const { addCandlestick, addHistogram } = getSeriesFactories(chart, LightweightCharts);
+      const candles = addCandlestick();
+      const volume = addHistogram();
 
       const candleData: CandleDataPoint[] = chartData.data.map((point) => ({
         time: point.date.slice(0, 10),
