@@ -18,7 +18,7 @@ public class PermissionsController : ControllerBase {
     }
 
     [HttpGet]
-    [Authorize(Policy = "Permission:api.permissions.get")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<PermissionResponse>>> GetPermissions() {
         var permissions = await _context.Permissions
             .OrderBy(p => p.SortOrder)
