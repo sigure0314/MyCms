@@ -149,6 +149,28 @@ export interface LiveKitTokenRequest {
   participantName?: string;
 }
 
+
+export interface StockPricePoint {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface MovingAveragePoint {
+  time: string;
+  value: number;
+}
+
+export interface StockChartResponse {
+  symbol: string;
+  prices: StockPricePoint[];
+  ma5: MovingAveragePoint[];
+  ma20: MovingAveragePoint[];
+}
+
 export interface LiveKitTokenResponse {
   token: string;
   serverUrl: string;
@@ -348,6 +370,9 @@ const api = {
   },
   createLiveKitToken: (data: LiveKitTokenRequest) => {
     return axiosInstance.post<LiveKitTokenResponse>('/livekit/token', data);
+  },
+  getStockChart: (symbol: string) => {
+    return axiosInstance.get<StockChartResponse>(`/stocks/${symbol}`);
   }
 };
 
