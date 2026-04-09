@@ -9,27 +9,30 @@ public class YoutubeCommentsService
 {
     private const string YoutubeApiBase = "https://www.googleapis.com/youtube/v3/commentThreads";
     private readonly HttpClient _httpClient;
+    private readonly string _configuredApiKey;
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public YoutubeCommentsService(HttpClient httpClient)
+    public YoutubeCommentsService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
+        _configuredApiKey = configuration["Youtube:ApiKey"] ?? string.Empty;
     }
 
     public async Task<FetchYoutubeCommentsResponse> FetchCommentsAsync(string videoInput, string apiKey, CancellationToken cancellationToken)
     {
+        var effectiveApiKey = string.IsNullOrWhiteSpace(apiKey) ? _configuredApiKey : apiKey;
         var videoId = ExtractVideoId(videoInput);
         if (videoId == null)
         {
             throw new ArgumentException("請輸入有效的 YouTube 影片網址或影片 ID。");
         }
 
-        if (string.IsNullOrWhiteSpace(apiKey))
+        if (string.IsNullOrWhiteSpace(effectiveApiKey))
         {
-            throw new ArgumentException("請提供 YouTube API Key。");
+            throw new ArgumentException("請提供 YouTube API Key，或在 appsettings 設定 Youtube:ApiKey。");
         }
 
         var comments = new List<YoutubeCommentDto>();
@@ -45,7 +48,7 @@ public class YoutubeCommentsService
                 ["part"] = "snippet",
                 ["videoId"] = videoId,
                 ["maxResults"] = "100",
-                ["key"] = apiKey.Trim()
+                ["key"] = effectiveApiKey.Trim()
             };
 
             if (!string.IsNullOrWhiteSpace(nextPageToken))
