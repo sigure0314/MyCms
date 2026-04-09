@@ -18,6 +18,7 @@ public class YoutubeCommentsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<FetchYoutubeCommentsResponse>> GetComments(CancellationToken cancellationToken)
     {
         try
@@ -36,6 +37,7 @@ public class YoutubeCommentsController : ControllerBase
     }
 
     [HttpPost("fetch")]
+    [AllowAnonymous]
     public async Task<ActionResult<FetchYoutubeCommentsResponse>> FetchComments([FromBody] FetchYoutubeCommentsRequest request, CancellationToken cancellationToken)
     {
         try

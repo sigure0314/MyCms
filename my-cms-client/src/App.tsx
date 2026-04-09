@@ -101,7 +101,7 @@ const App = () => {
           {/* 行銷區 */}
           <Route
             path="/marketing/youtube"
-            element={<PermissionRoute path="/marketing/youtube" element={<YoutubeComments />} />}
+            element={<YoutubeComments />}
           />
           <Route
             path="/marketing/instagram-posts"
