@@ -156,6 +156,7 @@ builder.Services.AddScoped<InstagramPublishJobService>();
 builder.Services.Configure<InstagramPublishOptions>(builder.Configuration.GetSection("InstagramPublish"));
 builder.Services.AddScoped<StoryService>();
 builder.Services.AddHttpClient<IStockDataService, StockDataService>();
+builder.Services.AddHttpClient<YoutubeCommentsService>();
 builder.Services.Configure<RedisOptions>(builder.Configuration.GetSection("Redis"));
 builder.Services.AddSingleton<IOnlineUserTracker, OnlineUserTracker>();
 builder.Services.Configure<LiveKitOptions>(builder.Configuration.GetSection("LiveKit"));
