@@ -176,9 +176,15 @@ export interface YoutubeComment {
 }
 
 export interface FetchYoutubeCommentsResponse {
+  tempFileId: string;
   pageCount: number;
   totalCount: number;
   comments: YoutubeComment[];
+}
+
+export interface FetchYoutubeCommentsRequest {
+  videoInput: string;
+  apiKey?: string;
 }
 export interface LiveKitTokenResponse {
   token: string;
@@ -386,6 +392,9 @@ const api = {
 
   fetchYoutubeComments: () => {
     return axiosInstance.get<FetchYoutubeCommentsResponse>('/youtube-comments');
+  },
+  fetchYoutubeCommentsByInput: (data: FetchYoutubeCommentsRequest) => {
+    return axiosInstance.post<FetchYoutubeCommentsResponse>('/youtube-comments/fetch', data);
   },
 };
 

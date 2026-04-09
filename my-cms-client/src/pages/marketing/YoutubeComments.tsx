@@ -18,6 +18,8 @@ const statusColors: Record<CommentStatus, string> = {
 const YoutubeComments: React.FC = () => {
   const [comments, setComments] = useState<YoutubeCommentView[]>([]);
   const [search, setSearch] = useState('');
+  const [videoInput, setVideoInput] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [status, setStatus] = useState<CommentStatus | '全部'>('全部');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,18 +56,23 @@ const YoutubeComments: React.FC = () => {
     setLoading(true);
 
     try {
-      const { data } = await api.fetchYoutubeComments();
+      const { data } = videoInput.trim()
+        ? await api.fetchYoutubeCommentsByInput({
+            videoInput: videoInput.trim(),
+            apiKey: apiKey.trim() || undefined,
+          })
+        : await api.fetchYoutubeComments();
       const mapped = data.comments.map(c => ({ ...c, status: '待回覆' as const }));
       setComments(mapped);
       setSelectedRowKeys([]);
       message.success(`已完成抓取，共 ${data.totalCount} 則留言（${data.pageCount} 頁）`);
     } catch (error) {
       console.error(error);
-      message.error('抓取留言失敗，請確認後端設定的影片網址與 API Key');
+      message.error('抓取留言失敗，請確認影片連結與 API Key（或後端 appsettings 設定）');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiKey, videoInput]);
 
   useEffect(() => {
     void fetchAllComments();
@@ -190,6 +197,20 @@ const YoutubeComments: React.FC = () => {
         }
       >
         <Space style={{ marginBottom: 16 }} wrap>
+          <Input
+            allowClear
+            placeholder="貼上 YouTube 影片連結或影片 ID"
+            value={videoInput}
+            onChange={e => setVideoInput(e.target.value)}
+            style={{ width: 360 }}
+          />
+          <Input.Password
+            allowClear
+            placeholder="YouTube API Key（可選，留空則用後端設定）"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            style={{ width: 320 }}
+          />
           <Input.Search
             allowClear
             placeholder="搜尋留言或作者"
