@@ -184,7 +184,6 @@ export interface FetchYoutubeCommentsResponse {
 
 export interface FetchYoutubeCommentsRequest {
   videoInput: string;
-  apiKey?: string;
 }
 export interface LiveKitTokenResponse {
   token: string;
