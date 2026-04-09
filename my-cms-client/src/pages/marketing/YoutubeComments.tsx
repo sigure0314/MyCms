@@ -14,38 +14,13 @@ import {
   message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import api, { getApiBaseUrl, type YoutubeComment } from '../../services/api';
 
 type CommentStatus = '待回覆' | '已回覆' | '已隱藏';
 
-interface YoutubeComment {
-  id: string;
-  videoId: string;
-  author: string;
-  content: string;
-  likeCount: number;
-  publishedAt: string;
-  updatedAt: string;
+type YoutubeCommentView = YoutubeComment & {
   status: CommentStatus;
-}
-
-interface YoutubeCommentThreadResponse {
-  nextPageToken?: string;
-  items: Array<{
-    snippet: {
-      topLevelComment: {
-        id: string;
-        snippet: {
-          authorDisplayName: string;
-          textDisplay: string;
-          likeCount: number;
-          publishedAt: string;
-          updatedAt: string;
-          videoId: string;
-        };
-      };
-    };
-  }>;
-}
+};
 
 const statusColors: Record<CommentStatus, string> = {
   待回覆: 'orange',
@@ -53,56 +28,29 @@ const statusColors: Record<CommentStatus, string> = {
   已隱藏: 'red',
 };
 
-const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3/commentThreads';
-
-const extractVideoId = (input: string): string | null => {
-  const raw = input.trim();
-  if (!raw) return null;
-
-  if (/^[a-zA-Z0-9_-]{11}$/.test(raw)) {
-    return raw;
+const resolveDownloadUrl = (path: string): string => {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
   }
 
-  try {
-    const url = new URL(raw);
-
-    if (url.hostname.includes('youtu.be')) {
-      const id = url.pathname.split('/').filter(Boolean)[0];
-      return id && /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
-    }
-
-    if (url.hostname.includes('youtube.com')) {
-      const v = url.searchParams.get('v');
-      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) {
-        return v;
-      }
-
-      const parts = url.pathname.split('/').filter(Boolean);
-      const shortsIndex = parts.indexOf('shorts');
-      if (shortsIndex >= 0 && parts[shortsIndex + 1] && /^[a-zA-Z0-9_-]{11}$/.test(parts[shortsIndex + 1])) {
-        return parts[shortsIndex + 1];
-      }
-
-      const embedIndex = parts.indexOf('embed');
-      if (embedIndex >= 0 && parts[embedIndex + 1] && /^[a-zA-Z0-9_-]{11}$/.test(parts[embedIndex + 1])) {
-        return parts[embedIndex + 1];
-      }
-    }
-  } catch {
-    return null;
+  const base = getApiBaseUrl();
+  if (base.startsWith('http://') || base.startsWith('https://')) {
+    return `${base.replace(/\/$/, '')}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 
-  return null;
+  const origin = window.location.origin;
+  return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
 const YoutubeComments: React.FC = () => {
-  const [comments, setComments] = useState<YoutubeComment[]>([]);
+  const [comments, setComments] = useState<YoutubeCommentView[]>([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<CommentStatus | '全部'>('全部');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [videoUrl, setVideoUrl] = useState('');
-  const [apiKey, setApiKey] = useState(import.meta.env.VITE_YOUTUBE_API_KEY ?? '');
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [tempFileId, setTempFileId] = useState('');
 
   const filteredComments = useMemo(() => {
     return comments.filter(comment => {
@@ -133,68 +81,20 @@ const YoutubeComments: React.FC = () => {
   };
 
   const fetchAllComments = async () => {
-    const videoId = extractVideoId(videoUrl);
-    if (!videoId) {
+    if (!videoUrl.trim()) {
       message.error('請輸入有效的 YouTube 影片網址或影片 ID');
-      return;
-    }
-
-    if (!apiKey.trim()) {
-      message.error('請先輸入 YouTube API Key');
       return;
     }
 
     setLoading(true);
 
     try {
-      let nextPageToken: string | undefined;
-      const allComments: YoutubeComment[] = [];
-      let pageCount = 0;
-
-      do {
-        pageCount += 1;
-
-        const params = new URLSearchParams({
-          part: 'snippet',
-          videoId,
-          maxResults: '100',
-          key: apiKey.trim(),
-        });
-
-        if (nextPageToken) {
-          params.set('pageToken', nextPageToken);
-        }
-
-        const response = await fetch(`${YOUTUBE_API_BASE}?${params.toString()}`);
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`YouTube API 錯誤 (${response.status}): ${errorText}`);
-        }
-
-        const data = await response.json() as YoutubeCommentThreadResponse;
-
-        data.items.forEach(item => {
-          const topLevel = item.snippet.topLevelComment;
-          const snippet = topLevel.snippet;
-
-          allComments.push({
-            id: topLevel.id,
-            videoId: snippet.videoId,
-            author: snippet.authorDisplayName,
-            content: snippet.textDisplay,
-            likeCount: snippet.likeCount,
-            publishedAt: snippet.publishedAt,
-            updatedAt: snippet.updatedAt,
-            status: '待回覆',
-          });
-        });
-
-        nextPageToken = data.nextPageToken;
-      } while (nextPageToken);
-
-      setComments(allComments);
+      const { data } = await api.fetchYoutubeComments(videoUrl.trim());
+      const mapped = data.comments.map(c => ({ ...c, status: '待回覆' as const }));
+      setComments(mapped);
+      setTempFileId(data.tempFileId);
       setSelectedRowKeys([]);
-      message.success(`已完成抓取，共 ${allComments.length} 則留言（${pageCount} 頁）`);
+      message.success(`已完成抓取，共 ${data.totalCount} 則留言（${data.pageCount} 頁）`);
     } catch (error) {
       console.error(error);
       message.error('抓取留言失敗，請確認影片是否開放留言與 API Key 權限');
@@ -203,7 +103,27 @@ const YoutubeComments: React.FC = () => {
     }
   };
 
-  const columns: ColumnsType<YoutubeComment> = [
+  const exportComments = async () => {
+    if (!tempFileId) {
+      message.warning('請先讀取留言後再匯出');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const { data } = await api.exportYoutubeComments(tempFileId);
+      const downloadUrl = resolveDownloadUrl(data.downloadUrl);
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      message.success('已產生匯出檔案');
+    } catch (error) {
+      console.error(error);
+      message.error('匯出失敗，請先重新讀取留言');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const columns: ColumnsType<YoutubeCommentView> = [
     {
       title: '影片 ID',
       dataIndex: 'videoId',
@@ -325,14 +245,11 @@ const YoutubeComments: React.FC = () => {
             onChange={e => setVideoUrl(e.target.value)}
             style={{ width: 340 }}
           />
-          <Input.Password
-            placeholder="YouTube API Key"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            style={{ width: 260 }}
-          />
           <Button type="primary" loading={loading} onClick={fetchAllComments}>
             讀取全部留言
+          </Button>
+          <Button loading={exporting} disabled={!tempFileId || loading} onClick={exportComments}>
+            匯出 CSV
           </Button>
         </Space>
 

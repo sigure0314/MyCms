@@ -164,6 +164,28 @@ export interface TaiwanStockKLineResponse {
   data: TaiwanStockKLinePoint[];
 }
 
+
+export interface YoutubeComment {
+  id: string;
+  videoId: string;
+  author: string;
+  content: string;
+  likeCount: number;
+  publishedAt: string;
+  updatedAt: string;
+}
+
+export interface FetchYoutubeCommentsResponse {
+  tempFileId: string;
+  pageCount: number;
+  totalCount: number;
+  comments: YoutubeComment[];
+}
+
+export interface ExportYoutubeCommentsResponse {
+  fileId: string;
+  downloadUrl: string;
+}
 export interface LiveKitTokenResponse {
   token: string;
   serverUrl: string;
@@ -366,7 +388,16 @@ const api = {
   },
   getStockChart: (stockNo: string) => {
     return axiosInstance.get<TaiwanStockKLineResponse>(`/stocks/${stockNo}`);
-  }
+  },
+
+  fetchYoutubeComments: (videoInput: string) => {
+    return axiosInstance.post<FetchYoutubeCommentsResponse>('/youtube-comments/fetch', {
+      videoInput,
+    });
+  },
+  exportYoutubeComments: (tempFileId: string) => {
+    return axiosInstance.post<ExportYoutubeCommentsResponse>('/youtube-comments/export', { tempFileId });
+  },
 };
 
 export default api;
