@@ -17,6 +17,24 @@ public class YoutubeCommentsController : ControllerBase
         _youtubeCommentsService = youtubeCommentsService;
     }
 
+    [HttpGet]
+    public async Task<ActionResult<FetchYoutubeCommentsResponse>> GetComments(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _youtubeCommentsService.FetchCommentsAsync(string.Empty, string.Empty, cancellationToken);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
+        }
+    }
+
     [HttpPost("fetch")]
     public async Task<ActionResult<FetchYoutubeCommentsResponse>> FetchComments([FromBody] FetchYoutubeCommentsRequest request, CancellationToken cancellationToken)
     {

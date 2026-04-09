@@ -176,15 +176,9 @@ export interface YoutubeComment {
 }
 
 export interface FetchYoutubeCommentsResponse {
-  tempFileId: string;
   pageCount: number;
   totalCount: number;
   comments: YoutubeComment[];
-}
-
-export interface ExportYoutubeCommentsResponse {
-  fileId: string;
-  downloadUrl: string;
 }
 export interface LiveKitTokenResponse {
   token: string;
@@ -390,14 +384,8 @@ const api = {
     return axiosInstance.get<TaiwanStockKLineResponse>(`/stocks/${stockNo}`);
   },
 
-  fetchYoutubeComments: (videoInput: string, apiKey: string) => {
-    return axiosInstance.post<FetchYoutubeCommentsResponse>('/youtube-comments/fetch', {
-      videoInput,
-      apiKey,
-    });
-  },
-  exportYoutubeComments: (tempFileId: string) => {
-    return axiosInstance.post<ExportYoutubeCommentsResponse>('/youtube-comments/export', { tempFileId });
+  fetchYoutubeComments: () => {
+    return axiosInstance.get<FetchYoutubeCommentsResponse>('/youtube-comments');
   },
 };
 
