@@ -19,7 +19,6 @@ const YoutubeComments: React.FC = () => {
   const [comments, setComments] = useState<YoutubeCommentView[]>([]);
   const [search, setSearch] = useState('');
   const [videoInput, setVideoInput] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [status, setStatus] = useState<CommentStatus | '全部'>('全部');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [loading, setLoading] = useState(false);
@@ -59,7 +58,6 @@ const YoutubeComments: React.FC = () => {
       const { data } = videoInput.trim()
         ? await api.fetchYoutubeCommentsByInput({
             videoInput: videoInput.trim(),
-            apiKey: apiKey.trim() || undefined,
           })
         : await api.fetchYoutubeComments();
       const mapped = data.comments.map(c => ({ ...c, status: '待回覆' as const }));
@@ -68,11 +66,11 @@ const YoutubeComments: React.FC = () => {
       message.success(`已完成抓取，共 ${data.totalCount} 則留言（${data.pageCount} 頁）`);
     } catch (error) {
       console.error(error);
-      message.error('抓取留言失敗，請確認影片連結與 API Key（或後端 appsettings 設定）');
+      message.error('抓取留言失敗，請確認影片連結或後端 YouTube 設定。');
     } finally {
       setLoading(false);
     }
-  }, [apiKey, videoInput]);
+  }, [videoInput]);
 
   useEffect(() => {
     void fetchAllComments();
@@ -203,13 +201,6 @@ const YoutubeComments: React.FC = () => {
             value={videoInput}
             onChange={e => setVideoInput(e.target.value)}
             style={{ width: 360 }}
-          />
-          <Input.Password
-            allowClear
-            placeholder="YouTube API Key（可選，留空則用後端設定）"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            style={{ width: 320 }}
           />
           <Input.Search
             allowClear
