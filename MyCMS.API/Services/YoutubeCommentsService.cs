@@ -10,6 +10,7 @@ public class YoutubeCommentsService
     private const string YoutubeApiBase = "https://www.googleapis.com/youtube/v3/commentThreads";
     private readonly HttpClient _httpClient;
     private readonly string _configuredApiKey;
+    private readonly string _configuredVideoInput;
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
@@ -19,15 +20,17 @@ public class YoutubeCommentsService
     {
         _httpClient = httpClient;
         _configuredApiKey = configuration["Youtube:ApiKey"] ?? string.Empty;
+        _configuredVideoInput = configuration["Youtube:VideoInput"] ?? string.Empty;
     }
 
     public async Task<FetchYoutubeCommentsResponse> FetchCommentsAsync(string videoInput, string apiKey, CancellationToken cancellationToken)
     {
+        var effectiveVideoInput = string.IsNullOrWhiteSpace(videoInput) ? _configuredVideoInput : videoInput;
         var effectiveApiKey = string.IsNullOrWhiteSpace(apiKey) ? _configuredApiKey : apiKey;
-        var videoId = ExtractVideoId(videoInput);
+        var videoId = ExtractVideoId(effectiveVideoInput);
         if (videoId == null)
         {
-            throw new ArgumentException("請輸入有效的 YouTube 影片網址或影片 ID。");
+            throw new ArgumentException("請提供有效的 YouTube 影片網址或影片 ID，或在 appsettings 設定 Youtube:VideoInput。");
         }
 
         if (string.IsNullOrWhiteSpace(effectiveApiKey))
