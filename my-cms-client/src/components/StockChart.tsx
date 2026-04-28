@@ -27,6 +27,18 @@ type HistogramDataPoint = {
   color?: string;
 };
 
+const normalizeKLinePoints = (payload: TaiwanStockKLineResponse | null): TaiwanStockKLineResponse => {
+  if (!payload) {
+    return { stockNo: '', data: [] };
+  }
+
+  const safeData = Array.isArray(payload.data) ? payload.data : [];
+  return {
+    stockNo: payload.stockNo ?? '',
+    data: safeData,
+  };
+};
+
 type SeriesApi<T> = {
   setData: (data: T[]) => void;
 };
@@ -134,8 +146,16 @@ const StockChart: React.FC = () => {
     try {
       const normalizedStockNo = stockNo.trim() || '2330';
       const { data } = await api.getStockChart(normalizedStockNo);
-      setChartData(data);
-      setActiveStockNo(normalizedStockNo);
+      const normalized = normalizeKLinePoints(data);
+
+      if (normalized.data.length === 0) {
+        setChartData(null);
+        setError('No stock price data was returned for this stock number.');
+        return;
+      }
+
+      setChartData(normalized);
+      setActiveStockNo(normalized.stockNo || normalizedStockNo);
     } catch {
       setError('Failed to load Taiwan stock K-line data.');
     } finally {
@@ -175,7 +195,13 @@ const StockChart: React.FC = () => {
       const candles = addCandlestick();
       const volume = addHistogram();
 
-      const candleData: CandleDataPoint[] = chartData.data.map((point) => ({
+      const points = Array.isArray(chartData.data) ? chartData.data : [];
+      if (points.length === 0) {
+        setError('Stock chart data is empty.');
+        return;
+      }
+
+      const candleData: CandleDataPoint[] = points.map((point) => ({
         time: point.date.slice(0, 10),
         open: point.open,
         high: point.high,
@@ -183,7 +209,7 @@ const StockChart: React.FC = () => {
         close: point.close,
       }));
 
-      const volumeData: HistogramDataPoint[] = chartData.data.map((point) => ({
+      const volumeData: HistogramDataPoint[] = points.map((point) => ({
         time: point.date.slice(0, 10),
         value: point.volume,
         color: point.close >= point.open ? '#22c55e88' : '#ef444488',
