@@ -23,11 +23,19 @@ public class AuthController : ControllerBase {
 
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest req) {
-        if (await _context.Users.AnyAsync(u => u.Username == req.Username)) return BadRequest("User exists");
+        var normalizedUsername = req.Username?.Trim() ?? string.Empty;
+        var normalizedEmail = req.Email?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(normalizedUsername) || string.IsNullOrWhiteSpace(req.Password) || string.IsNullOrWhiteSpace(normalizedEmail)) {
+            return BadRequest("Username, email and password are required");
+        }
+
+        if (await _context.Users.AnyAsync(u => u.Username.ToLower() == normalizedUsername.ToLower())) return BadRequest("User exists");
+        if (await _context.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail.ToLower())) return BadRequest("Email exists");
         
         var user = new User {
-            Username = req.Username,
-            Email = req.Email,
+            Username = normalizedUsername,
+            Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
             RoleId = 2 // Default Editor
         };
@@ -50,12 +58,22 @@ public class AuthController : ControllerBase {
 
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest req) {
+        var credential = req.Username?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(credential) || string.IsNullOrWhiteSpace(req.Password)) {
+            return BadRequest("Username/email and password are required");
+        }
+
         var user = await _context.Users
             .Include(u => u.Role)
             .ThenInclude(r => r.RolePermissions)
             .ThenInclude(rp => rp.Permission)
-            .FirstOrDefaultAsync(u => u.Username == req.Username);
+            .FirstOrDefaultAsync(u =>
+                u.Username.ToLower() == credential.ToLower() ||
+                u.Email.ToLower() == credential.ToLower());
+
         if (user == null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash)) return Unauthorized();
+        if (user.Role == null) return Unauthorized("User role not configured");
         var permissions = GetPermissionCodes(user.Role);
 
         var loginIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
