@@ -1,9 +1,8 @@
 {
-  "rootDirectory": "my-cms-client",
   "framework": "vite",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm install",
+  "buildCommand": "cd my-cms-client && npm run build",
+  "outputDirectory": "my-cms-client/dist",
+  "installCommand": "cd my-cms-client && npm install",
   "rewrites": [
     {
       "source": "/(.*)",
