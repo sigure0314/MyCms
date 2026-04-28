@@ -144,6 +144,56 @@ export interface FramePlaylistUpdateRequest {
   items: FramePlaylistItemOrder[];
 }
 
+
+export type PropertyCategory = 1 | 2 | 3 | 4;
+
+export interface PropertyArea {
+  id: number;
+  name: string;
+  location: string;
+  category: PropertyCategory;
+  categoryName: string;
+  qrToken: string;
+  qrCodePayload: string;
+  qrCodeImageUrl: string;
+  createdAtUtc: string;
+}
+
+export interface PropertyDashboardSummary {
+  dateUtc: string;
+  todayCompletedCount: number;
+  categoryStats: Record<string, number>;
+  recentActivities: PropertyCheckInHistoryItem[];
+}
+
+export interface PropertyCheckInHistoryItem {
+  logId: number;
+  areaId: number;
+  areaName: string;
+  location: string;
+  category: PropertyCategory;
+  categoryName: string;
+  username: string;
+  checkInAtUtc: string;
+  note?: string;
+}
+
+export interface PropertyCheckInHistoryResponse {
+  totalCount: number;
+  items: PropertyCheckInHistoryItem[];
+}
+
+export interface CreatePropertyAreaRequest {
+  name: string;
+  location: string;
+  category: PropertyCategory;
+}
+
+export interface PropertyCheckInRequest {
+  qrToken: string;
+  note?: string;
+}
+
 export interface LiveKitTokenRequest {
   roomName: string;
   participantName?: string;
@@ -382,6 +432,28 @@ const api = {
   deleteFrameItem: (id: string) => {
     return axiosInstance.delete<FramePlaylistAdminResponse>(`/frame/items/${id}`);
   },
+
+  getPropertyAreas: () => {
+    return axiosInstance.get<PropertyArea[]>('/property-management/areas');
+  },
+  createPropertyArea: (data: CreatePropertyAreaRequest) => {
+    return axiosInstance.post<PropertyArea>('/property-management/areas', data);
+  },
+  propertyCheckIn: (data: PropertyCheckInRequest) => {
+    return axiosInstance.post('/property-management/checkin', data);
+  },
+  getPropertyDashboard: () => {
+    return axiosInstance.get<PropertyDashboardSummary>('/property-management/dashboard');
+  },
+  getPropertyHistory: (params: {
+    page?: number;
+    pageSize?: number;
+    category?: PropertyCategory;
+    username?: string;
+  }) => {
+    return axiosInstance.get<PropertyCheckInHistoryResponse>('/property-management/history', { params });
+  },
+
   createLiveKitToken: (data: LiveKitTokenRequest) => {
     return axiosInstance.post<LiveKitTokenResponse>('/livekit/token', data);
   },

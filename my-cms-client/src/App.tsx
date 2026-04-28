@@ -31,6 +31,7 @@ import PersonalSettings from './pages/PersonalSettings';
 import PosAsyncKitchen from './pages/PosAsyncKitchen';
 import MenuManagement from './pages/pos/MenuManagement';
 import FrameManagement from './pages/frame/FrameManagement';
+import PropertyManagement from './pages/property/PropertyManagement';
 
 const App = () => {
   const [apiLoading, setApiLoading] = useState(false);
@@ -137,6 +138,16 @@ const App = () => {
           <Route
             path="/frame"
             element={<PermissionRoute path="/frame" element={<FrameManagement />} />}
+          />
+
+          <Route
+            path="/property"
+            element={<PermissionRoute path="/property" element={<PropertyManagement />} />}
+          />
+
+          <Route
+            path="/property/checkin"
+            element={<PermissionRoute path="/property" element={<PropertyManagement />} />}
           />
 
           {/* 注意：因為 generate 和 player 頁面還沒做，
