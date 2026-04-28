@@ -35,100 +35,122 @@ public class OnlineUserTracker : IOnlineUserTracker
 
     public async Task RecordLoginAsync(string username, string loginIp, string? currentPage = null)
     {
-        var db = await GetDatabaseAsync();
-        if (db == null)
+        try
         {
-            return;
-        }
+            var db = await GetDatabaseAsync();
+            if (db == null)
+            {
+                return;
+            }
 
-        var now = DateTimeOffset.UtcNow;
-        var record = new OnlineUserRecord
-        {
-            Username = username,
-            LoginIp = loginIp,
-            CurrentPage = string.IsNullOrWhiteSpace(currentPage) ? "登入" : currentPage,
-            TotalSeconds = 0,
-            LoginAtUtc = now,
-            LastSeenUtc = now
-        };
-
-        await SaveRecordAsync(db, record);
-    }
-
-    public async Task UpdateActivityAsync(string username, string currentPage)
-    {
-        var db = await GetDatabaseAsync();
-        if (db == null)
-        {
-            return;
-        }
-
-        var record = await GetRecordAsync(db, username);
-        var now = DateTimeOffset.UtcNow;
-        if (record == null)
-        {
-            record = new OnlineUserRecord
+            var now = DateTimeOffset.UtcNow;
+            var record = new OnlineUserRecord
             {
                 Username = username,
-                LoginIp = string.Empty,
-                CurrentPage = currentPage,
+                LoginIp = loginIp,
+                CurrentPage = string.IsNullOrWhiteSpace(currentPage) ? "登入" : currentPage,
                 TotalSeconds = 0,
                 LoginAtUtc = now,
                 LastSeenUtc = now
             };
-        }
-        else
-        {
-            var delta = now - record.LastSeenUtc;
-            if (delta > TimeSpan.Zero)
-            {
-                record.TotalSeconds += delta.TotalSeconds;
-            }
-            record.LastSeenUtc = now;
-            record.CurrentPage = currentPage;
-        }
 
-        await SaveRecordAsync(db, record);
+            await SaveRecordAsync(db, record);
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogWarning(ex, "Failed to record login activity for {Username}.", username);
+        }
+    }
+
+    public async Task UpdateActivityAsync(string username, string currentPage)
+    {
+        try
+        {
+            var db = await GetDatabaseAsync();
+            if (db == null)
+            {
+                return;
+            }
+
+            var record = await GetRecordAsync(db, username);
+            var now = DateTimeOffset.UtcNow;
+            if (record == null)
+            {
+                record = new OnlineUserRecord
+                {
+                    Username = username,
+                    LoginIp = string.Empty,
+                    CurrentPage = currentPage,
+                    TotalSeconds = 0,
+                    LoginAtUtc = now,
+                    LastSeenUtc = now
+                };
+            }
+            else
+            {
+                var delta = now - record.LastSeenUtc;
+                if (delta > TimeSpan.Zero)
+                {
+                    record.TotalSeconds += delta.TotalSeconds;
+                }
+                record.LastSeenUtc = now;
+                record.CurrentPage = currentPage;
+            }
+
+            await SaveRecordAsync(db, record);
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogWarning(ex, "Failed to update online activity for {Username}.", username);
+        }
     }
 
     public async Task<IReadOnlyList<OnlineUserDto>> GetOnlineUsersAsync()
     {
-        var db = await GetDatabaseAsync();
-        if (db == null)
+        try
         {
-            return Array.Empty<OnlineUserDto>();
-        }
-
-        var indexKey = GetIndexKey();
-        var members = await db.SetMembersAsync(indexKey);
-        if (members.Length == 0)
-        {
-            return Array.Empty<OnlineUserDto>();
-        }
-
-        var tasks = members.Select(async member =>
-        {
-            var username = member.ToString();
-            var record = await GetRecordAsync(db, username);
-            if (record == null)
+            var db = await GetDatabaseAsync();
+            if (db == null)
             {
-                await db.SetRemoveAsync(indexKey, member);
-                return null;
+                return Array.Empty<OnlineUserDto>();
             }
 
-            return new OnlineUserDto
+            var indexKey = GetIndexKey();
+            var members = await db.SetMembersAsync(indexKey);
+            if (members.Length == 0)
             {
-                Username = record.Username,
-                TotalSeconds = record.TotalSeconds,
-                CurrentPage = record.CurrentPage,
-                LoginIp = record.LoginIp,
-                LoginAtUtc = record.LoginAtUtc,
-                LastSeenUtc = record.LastSeenUtc
-            };
-        });
+                return Array.Empty<OnlineUserDto>();
+            }
 
-        var records = await Task.WhenAll(tasks);
-        return records.Where(record => record != null).Select(record => record!).ToList();
+            var tasks = members.Select(async member =>
+            {
+                var username = member.ToString();
+                var record = await GetRecordAsync(db, username);
+                if (record == null)
+                {
+                    await db.SetRemoveAsync(indexKey, member);
+                    return null;
+                }
+
+                return new OnlineUserDto
+                {
+                    Username = record.Username,
+                    TotalSeconds = record.TotalSeconds,
+                    CurrentPage = record.CurrentPage,
+                    LoginIp = record.LoginIp,
+                    LoginAtUtc = record.LoginAtUtc,
+                    LastSeenUtc = record.LastSeenUtc
+                };
+            });
+
+            var records = await Task.WhenAll(tasks);
+            return records.Where(record => record != null).Select(record => record!).ToList();
+        }
+        catch (RedisException ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch online user list from Redis.");
+            return Array.Empty<OnlineUserDto>();
+        }
     }
 
     private async Task<IDatabase?> GetDatabaseAsync()
