@@ -58,6 +58,9 @@ const PropertyManagement = () => {
       setDashboard(dashboardRes.data);
       setHistory(historyRes.data.items);
       setTotal(historyRes.data.totalCount);
+    } catch (error) {
+      console.error('載入物業管理資料失敗:', error);
+      message.error('載入 QR Code 區域管理資料失敗，請稍後再試。');
     } finally {
       setLoading(false);
     }
@@ -85,25 +88,43 @@ const PropertyManagement = () => {
   }, [dashboard]);
 
   const onCreateArea = async () => {
-    const values = await createAreaForm.validateFields();
-    await api.createPropertyArea(values);
-    message.success('已新增區域並產生 QR Code。');
-    createAreaForm.resetFields();
-    await loadAll();
+    try {
+      const values = await createAreaForm.validateFields();
+      await api.createPropertyArea(values);
+      message.success('已新增區域並產生 QR Code。');
+      createAreaForm.resetFields();
+      await loadAll();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+
+      console.error('新增區域失敗:', error);
+      message.error('新增區域失敗，請稍後再試。');
+    }
   };
 
   const onCheckIn = async () => {
-    const values = await checkInForm.validateFields();
-    const token = String(values.token ?? '').trim();
-    if (!token) {
-      message.error('請輸入 QR Token。');
-      return;
-    }
+    try {
+      const values = await checkInForm.validateFields();
+      const token = String(values.token ?? '').trim();
+      if (!token) {
+        message.error('請輸入 QR Token。');
+        return;
+      }
 
-    await api.propertyCheckIn({ qrToken: token, note: values.note });
-    message.success('簽到完成，已記錄時間與人員。');
-    checkInForm.resetFields();
-    await loadAll();
+      await api.propertyCheckIn({ qrToken: token, note: values.note });
+      message.success('簽到完成，已記錄時間與人員。');
+      checkInForm.resetFields();
+      await loadAll();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        return;
+      }
+
+      console.error('簽到失敗:', error);
+      message.error('簽到失敗，請確認 QR Token 是否正確。');
+    }
   };
 
   return (
