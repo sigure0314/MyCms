@@ -117,7 +117,16 @@ export const authService = {
   },
   isAuthenticated: () => !!localStorage.getItem('token'),
   getPermissionRoutes: () => getStoredPermissionRoutes(),
+  getLandingPath: () => {
+    const routes = getStoredPermissionRoutes();
+    const firstRoute = routes.find(route => typeof route === 'string' && route.length > 0);
+    return firstRoute ?? '/settings';
+  },
   hasPermission: (path: string) => {
+    if (!localStorage.getItem('token')) {
+      return false;
+    }
+
     if (path === '/settings') {
       return true;
     }
