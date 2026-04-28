@@ -8,12 +8,15 @@ interface PermissionRouteProps {
 }
 
 const PermissionRoute = ({ path, element }: PermissionRouteProps) => {
+  if (!authService.isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (authService.hasPermission(path)) {
     return element;
   }
 
-  const storedRoutes = authService.getPermissionRoutes();
-  const fallbackPath = storedRoutes.find(route => typeof route === 'string' && route.length > 0) ?? '/settings';
+  const fallbackPath = authService.getLandingPath();
 
   if (fallbackPath === path) {
     return <Navigate to="/settings" replace />;
