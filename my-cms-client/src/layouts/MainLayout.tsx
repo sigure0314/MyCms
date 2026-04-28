@@ -18,6 +18,7 @@ import {
   SettingOutlined,
   ShopOutlined,
   PictureOutlined,
+  BuildOutlined,
 } from '@ant-design/icons';
 import { authService } from '../services/authService';
 import api from '../services/api';
@@ -131,6 +132,11 @@ const MainLayout: React.FC = () => {
       key: '/frame',
       icon: <PictureOutlined />,
       label: '電子看板',
+    },
+    {
+      key: '/property',
+      icon: <BuildOutlined />,
+      label: '物業管理',
     },
     {
       key: 'sub-pos-kitchen',
