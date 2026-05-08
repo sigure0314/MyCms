@@ -21,6 +21,7 @@ public class PropertyManagementController : ControllerBase {
     }
 
     [HttpGet("areas")]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<PropertyAreaResponse>>> GetAreas([FromQuery] PropertyTaskCategory? category) {
         var query = _context.PropertyManagementAreas.AsQueryable();
         if (category.HasValue) {
@@ -56,6 +57,7 @@ public class PropertyManagementController : ControllerBase {
     }
 
     [HttpGet("dashboard")]
+    [AllowAnonymous]
     public async Task<ActionResult<PropertyDashboardSummaryResponse>> GetDashboard() {
         var today = DateTime.UtcNow.Date;
         var tomorrow = today.AddDays(1);
