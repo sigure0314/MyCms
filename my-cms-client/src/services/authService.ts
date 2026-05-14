@@ -72,13 +72,13 @@ const loadUserPermissions = async (roleName: string) => {
   return routes;
 };
 
-const ensurePermissionsLoaded = async () => {
+const ensurePermissionsLoaded = async (options?: { force?: boolean }) => {
   if (!localStorage.getItem('token')) {
     return [];
   }
 
   const existing = getStoredPermissionRoutes();
-  if (existing.length > 0) {
+  if (existing.length > 0 && !options?.force) {
     return existing;
   }
 
