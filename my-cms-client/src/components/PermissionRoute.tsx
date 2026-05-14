@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { Spin } from 'antd';
 import { authService } from '../services/authService';
 
 interface PermissionRouteProps {
@@ -8,8 +10,38 @@ interface PermissionRouteProps {
 }
 
 const PermissionRoute = ({ path, element }: PermissionRouteProps) => {
+  const [refreshedPath, setRefreshedPath] = useState<string | null>(null);
+  const permissionsReady = authService.isAdmin() || refreshedPath === path;
+
+  useEffect(() => {
+    if (!authService.isAuthenticated() || authService.isAdmin()) {
+      return;
+    }
+
+    let isMounted = true;
+
+    authService
+      .ensurePermissionsLoaded({ force: true })
+      .catch(error => {
+        console.warn('Permission route refresh failed.', error);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setRefreshedPath(path);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [path]);
+
   if (!authService.isAuthenticated()) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!permissionsReady) {
+    return <Spin tip="權限確認中..." />;
   }
 
   if (authService.hasPermission(path)) {
