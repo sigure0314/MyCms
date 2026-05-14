@@ -4,6 +4,13 @@ import type { LoginRequest, AuthResponse } from '../types/auth';
 const PERMISSIONS_STORAGE_KEY = 'permissionRoutes';
 const ROLE_STORAGE_KEY = 'role';
 
+const isAdminRole = (roleName: string | null | undefined) => {
+  const normalizedRole = roleName?.trim().toLowerCase();
+  return normalizedRole === 'admin' || normalizedRole === '管理員';
+};
+
+const getStoredRole = () => localStorage.getItem(ROLE_STORAGE_KEY) ?? getRoleFromToken();
+
 const getStoredPermissionRoutes = (): string[] => {
   const raw = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
   if (!raw) {
@@ -82,7 +89,7 @@ const ensurePermissionsLoaded = async (options?: { force?: boolean }) => {
     return existing;
   }
 
-  const roleName = localStorage.getItem(ROLE_STORAGE_KEY) ?? getRoleFromToken();
+  const roleName = getStoredRole();
   if (!roleName) {
     return existing;
   }
@@ -116,6 +123,7 @@ export const authService = {
     window.location.href = '/login';
   },
   isAuthenticated: () => !!localStorage.getItem('token'),
+  isAdmin: () => isAdminRole(getStoredRole()),
   getPermissionRoutes: () => getStoredPermissionRoutes(),
   getLandingPath: () => {
     const routes = getStoredPermissionRoutes();
@@ -127,7 +135,7 @@ export const authService = {
       return false;
     }
 
-    if (path === '/settings') {
+    if (isAdminRole(getStoredRole()) || path === '/settings') {
       return true;
     }
 
