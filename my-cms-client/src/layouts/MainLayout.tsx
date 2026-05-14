@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Layout, Menu, Button, theme } from 'antd';
 import type { MenuProps } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -32,8 +32,25 @@ const MainLayout: React.FC = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
+  const [, setPermissionRefreshTick] = useState(0);
+
   useEffect(() => {
-    void authService.ensurePermissionsLoaded();
+    let isMounted = true;
+
+    authService
+      .ensurePermissionsLoaded({ force: true })
+      .then(() => {
+        if (isMounted) {
+          setPermissionRefreshTick(tick => tick + 1);
+        }
+      })
+      .catch(error => {
+        console.warn('Permission refresh failed.', error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
