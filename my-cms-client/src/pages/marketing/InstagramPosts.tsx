@@ -3,7 +3,6 @@ import {
   Button,
   Card,
   Col,
-  DatePicker,
   Form,
   Image,
   Input,
@@ -19,7 +18,6 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { UploadOutlined } from '@ant-design/icons';
-import dayjs, { type Dayjs } from 'dayjs';
 import api from '../../services/api';
 import type { InstagramPost, InstagramPostStatus } from '../../services/api';
 
@@ -40,7 +38,6 @@ const InstagramPosts: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [statusDrafts, setStatusDrafts] = useState<Record<number, InstagramPostStatus>>({});
-  const [scheduleDrafts, setScheduleDrafts] = useState<Record<number, Dayjs | null>>({});
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -60,13 +57,10 @@ const InstagramPosts: React.FC = () => {
 
   useEffect(() => {
     const nextStatusDrafts: Record<number, InstagramPostStatus> = {};
-    const nextScheduleDrafts: Record<number, Dayjs | null> = {};
     posts.forEach((post) => {
       nextStatusDrafts[post.id] = post.status;
-      nextScheduleDrafts[post.id] = post.scheduledAt ? dayjs(post.scheduledAt) : null;
     });
     setStatusDrafts(nextStatusDrafts);
-    setScheduleDrafts(nextScheduleDrafts);
   }, [posts]);
 
   const statusMap = useMemo(() => {
@@ -102,16 +96,24 @@ const InstagramPosts: React.FC = () => {
 
   const handleStatusChange = async (post: InstagramPost) => {
     const nextStatus = statusDrafts[post.id] ?? post.status;
-    const scheduledAt = scheduleDrafts[post.id];
     try {
       await api.updateInstagramPost(post.id, {
         status: nextStatus,
-        scheduledAt: nextStatus === 'Approved' && scheduledAt ? scheduledAt.toISOString() : undefined,
       });
       message.success('已更新貼文狀態');
       fetchPosts();
     } catch (error) {
       message.error('更新狀態失敗');
+    }
+  };
+
+  const handlePublishNow = async (post: InstagramPost) => {
+    try {
+      await api.publishInstagramPostNow(post.id);
+      message.success('IG 貼文已立即發佈');
+      fetchPosts();
+    } catch (error) {
+      message.error('立即發佈失敗，請確認 IG Graph API 設定與圖片公開網址');
     }
   };
 
@@ -144,9 +146,9 @@ const InstagramPosts: React.FC = () => {
       ),
     },
     {
-      title: '預定發佈時間',
-      dataIndex: 'scheduledAt',
-      key: 'scheduledAt',
+      title: '發佈時間',
+      dataIndex: 'publishedAt',
+      key: 'publishedAt',
       render: (value?: string) => (value ? new Date(value).toLocaleString() : '-'),
     },
     {
@@ -166,21 +168,17 @@ const InstagramPosts: React.FC = () => {
             options={statusOptions.map(option => ({ label: option.label, value: option.value }))}
             onChange={(value) => {
               setStatusDrafts((prev) => ({ ...prev, [record.id]: value }));
-              if (value !== 'Approved') {
-                setScheduleDrafts((prev) => ({ ...prev, [record.id]: null }));
-              }
             }}
           />
-          {(statusDrafts[record.id] ?? record.status) === 'Approved' && (
-            <DatePicker
-              showTime
-              value={scheduleDrafts[record.id] ?? null}
-              onChange={(value) => setScheduleDrafts((prev) => ({ ...prev, [record.id]: value }))}
-              placeholder="選擇發布時間"
-            />
-          )}
           <Button type="primary" ghost onClick={() => handleStatusChange(record)}>
             更新狀態
+          </Button>
+          <Button
+            type="primary"
+            disabled={record.status === 'Published'}
+            onClick={() => handlePublishNow(record)}
+          >
+            立即發佈
           </Button>
         </Space>
       ),
@@ -243,7 +241,7 @@ const InstagramPosts: React.FC = () => {
                 />
               </Form.Item>
               <Text type="secondary">
-                新建立的貼文狀態固定為待審核，請至下方貼文管理區進行審核與發布設定。
+                新建立的貼文狀態固定為待審核，請至下方貼文管理區審核或直接立即發佈。
               </Text>
               <Form.Item>
                 <Button type="primary" htmlType="submit">

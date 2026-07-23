@@ -358,6 +358,9 @@ const api = {
   updateInstagramPost: (id: number, data: UpdateInstagramPostRequest) => {
     return axiosInstance.put<InstagramPost>(`/instagramposts/${id}`, data);
   },
+  publishInstagramPostNow: (id: number) => {
+    return axiosInstance.post<InstagramPost>(`/instagramposts/${id}/publish`);
+  },
   getRoles: () => {
     return axiosInstance.get<Role[]>('/roles');
   },

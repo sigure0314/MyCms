@@ -35,11 +35,6 @@ public class InstagramPublishJobService
             return false;
         }
 
-        if (post.ScheduledAt.HasValue && post.ScheduledAt.Value > DateTime.UtcNow)
-        {
-            return true;
-        }
-
         var imageUrl = BuildImageUrl(post.ImagePath);
         var publishResult = await _instagramGraphApiService.PublishAsync(imageUrl, post.Caption, CancellationToken.None);
         if (!publishResult.Success)
