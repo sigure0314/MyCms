@@ -8,12 +8,20 @@ public class InstagramGraphApiOptions
     public string AccessToken { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
     public string ApiBaseUrl { get; set; } = "https://graph.facebook.com/v19.0";
+    public int ContainerStatusMaxAttempts { get; set; } = 12;
+    public int ContainerStatusDelaySeconds { get; set; } = 5;
 }
 
 public record InstagramPublishResult(bool Success, string? ErrorMessage, string? CreationId, string? MediaId);
 
 public class InstagramGraphApiService
 {
+    private static readonly HashSet<string> FailedContainerStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ERROR",
+        "EXPIRED"
+    };
+
     private readonly HttpClient _httpClient;
     private readonly InstagramGraphApiOptions _options;
     private readonly ILogger<InstagramGraphApiService> _logger;
@@ -35,10 +43,21 @@ public class InstagramGraphApiService
             return new InstagramPublishResult(false, "Instagram Graph API 設定未完成。", null, null);
         }
 
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+        {
+            return new InstagramPublishResult(false, "Instagram 圖片網址必須是可公開存取的 HTTPS 絕對網址。", null, null);
+        }
+
         var creationId = await CreateMediaContainerAsync(imageUrl, caption, cancellationToken);
         if (string.IsNullOrWhiteSpace(creationId))
         {
             return new InstagramPublishResult(false, "建立媒體容器失敗。", null, null);
+        }
+
+        var containerIsReady = await WaitForContainerReadyAsync(creationId, cancellationToken);
+        if (!containerIsReady)
+        {
+            return new InstagramPublishResult(false, "媒體容器尚未處理完成或處理失敗。", creationId, null);
         }
 
         var mediaId = await PublishMediaContainerAsync(creationId, cancellationToken);
@@ -69,7 +88,51 @@ public class InstagramGraphApiService
             return null;
         }
 
-        return TryReadId(content);
+        return TryReadStringProperty(content, "id");
+    }
+
+    private async Task<bool> WaitForContainerReadyAsync(string creationId, CancellationToken cancellationToken)
+    {
+        var maxAttempts = Math.Max(1, _options.ContainerStatusMaxAttempts);
+        var delay = TimeSpan.FromSeconds(Math.Max(1, _options.ContainerStatusDelaySeconds));
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var statusCode = await GetContainerStatusCodeAsync(creationId, cancellationToken);
+            if (string.Equals(statusCode, "FINISHED", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (statusCode != null && FailedContainerStatuses.Contains(statusCode))
+            {
+                _logger.LogWarning("Instagram media container {CreationId} failed with status {StatusCode}", creationId, statusCode);
+                return false;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+
+        _logger.LogWarning("Instagram media container {CreationId} did not finish within {Attempts} attempts", creationId, maxAttempts);
+        return false;
+    }
+
+    private async Task<string?> GetContainerStatusCodeAsync(string creationId, CancellationToken cancellationToken)
+    {
+        var requestUrl = $"{_options.ApiBaseUrl.TrimEnd('/')}/{creationId}?fields=status_code&access_token={Uri.EscapeDataString(_options.AccessToken)}";
+        var response = await _httpClient.GetAsync(requestUrl, cancellationToken);
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Instagram media container status check failed: {StatusCode} {Body}", response.StatusCode, content);
+            return null;
+        }
+
+        return TryReadStringProperty(content, "status_code");
     }
 
     private async Task<string?> PublishMediaContainerAsync(string creationId, CancellationToken cancellationToken)
@@ -90,17 +153,17 @@ public class InstagramGraphApiService
             return null;
         }
 
-        return TryReadId(content);
+        return TryReadStringProperty(content, "id");
     }
 
-    private static string? TryReadId(string json)
+    private static string? TryReadStringProperty(string json, string propertyName)
     {
         try
         {
             using var document = JsonDocument.Parse(json);
-            if (document.RootElement.TryGetProperty("id", out var idElement))
+            if (document.RootElement.TryGetProperty(propertyName, out var propertyElement))
             {
-                return idElement.GetString();
+                return propertyElement.GetString();
             }
         }
         catch (JsonException)
