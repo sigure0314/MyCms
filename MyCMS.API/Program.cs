@@ -1,6 +1,4 @@
 using System.Text;
-using Hangfire;
-using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -74,17 +72,6 @@ if (string.IsNullOrWhiteSpace(kitchenConnectionString)) {
     builder.Services.AddDbContext<KitchenDbContext>(opt =>
         opt.UseNpgsql(kitchenConnectionString));
 }
-
-var hangfireConnectionString = kitchenConnectionString ?? throw new InvalidOperationException("DefaultConnection 未設定，無法啟用 Hangfire。");
-
-builder.Services.AddHangfire(config =>
-{
-    config.UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UsePostgreSqlStorage(options =>
-            options.UseNpgsqlConnection(hangfireConnectionString));
-});
-builder.Services.AddHangfireServer();
 
 builder.Services.AddScoped<Supabase.Client>(_ => 
     new Supabase.Client(supabaseUrl, supabaseKey, new Supabase.SupabaseOptions
@@ -180,7 +167,6 @@ app.UseCors("AllowConfiguredOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<HttpMutationLoggingMiddleware>();
-app.UseHangfireDashboard("/hangfire");
 app.MapControllers();
 app.MapGet("/api/ping", () => Results.Ok("pong"));
 app.MapHub<StoryHub>("/storyHub");
