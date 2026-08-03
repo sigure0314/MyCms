@@ -214,6 +214,26 @@ export interface TaiwanStockKLineResponse {
   data: TaiwanStockKLinePoint[];
 }
 
+export interface TaiwanStockOpenDataSnapshot {
+  stockNo: string;
+  name: string;
+  market: string;
+  currentPrice: number;
+  change: number;
+  changePercent: number;
+  open: number;
+  high: number;
+  low: number;
+  previousClose: number;
+  volume: number;
+  turnover: number;
+  peRatio?: number | null;
+  pbRatio?: number | null;
+  dividendYield?: number | null;
+  updatedAt: string;
+  source: string;
+}
+
 
 export interface YoutubeComment {
   id: string;
@@ -462,6 +482,9 @@ const api = {
   },
   getStockChart: (stockNo: string) => {
     return axiosInstance.get<TaiwanStockKLineResponse>(`/stocks/${stockNo}`);
+  },
+  getStockDashboard: (stockNo: string) => {
+    return axiosInstance.get<TaiwanStockOpenDataSnapshot>(`/stocks/${stockNo}/dashboard`);
   },
 
   fetchYoutubeComments: () => {

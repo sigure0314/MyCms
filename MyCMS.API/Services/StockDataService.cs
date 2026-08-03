@@ -7,11 +7,13 @@ namespace MyCMS.API.Services;
 public interface IStockDataService
 {
     Task<TaiwanStockKLineResponse> GetTaiwanStockDailyKLineAsync(string stockNo, CancellationToken cancellationToken = default);
+    Task<TaiwanStockOpenDataSnapshot> GetTaiwanStockSnapshotAsync(string stockNo, CancellationToken cancellationToken = default);
 }
 
 public class StockDataService : IStockDataService
 {
     private const string TwseEndpoint = "https://www.twse.com.tw/exchangeReport/STOCK_DAY";
+    private const string TwseOpenApiBaseUrl = "https://openapi.twse.com.tw/v1";
     private readonly HttpClient _httpClient;
 
     public StockDataService(HttpClient httpClient)
@@ -52,6 +54,74 @@ public class StockDataService : IStockDataService
         }
 
         return new TaiwanStockKLineResponse(normalizedStockNo, points);
+    }
+
+    public async Task<TaiwanStockOpenDataSnapshot> GetTaiwanStockSnapshotAsync(
+        string stockNo,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedStockNo = stockNo.Trim();
+        var quoteTask = FetchOpenApiRowsAsync("exchangeReport/STOCK_DAY_ALL", cancellationToken);
+        var valuationTask = FetchOpenApiRowsAsync("exchangeReport/BWIBBU_ALL", cancellationToken);
+        await Task.WhenAll(quoteTask, valuationTask);
+
+        var quote = quoteTask.Result.FirstOrDefault(row => GetValue(row, "Code") == normalizedStockNo)
+            ?? throw new InvalidOperationException($"No TWSE open data found for stockNo {normalizedStockNo}.");
+        var valuation = valuationTask.Result.FirstOrDefault(row => GetValue(row, "Code") == normalizedStockNo);
+
+        var close = ParseRequiredDecimal(quote, "ClosingPrice");
+        var change = ParseSignedDecimal(GetValue(quote, "Change"));
+        var previousClose = close - change;
+        var changePercent = previousClose == 0 ? 0 : change / previousClose * 100;
+
+        return new TaiwanStockOpenDataSnapshot(
+            normalizedStockNo,
+            GetValue(quote, "Name"),
+            "上市 · TWSE",
+            close,
+            change,
+            changePercent,
+            ParseRequiredDecimal(quote, "OpeningPrice"),
+            ParseRequiredDecimal(quote, "HighestPrice"),
+            ParseRequiredDecimal(quote, "LowestPrice"),
+            previousClose,
+            ParseRequiredLong(quote, "TradeVolume"),
+            ParseRequiredDecimal(quote, "TradeValue"),
+            ParseNullableDecimal(valuation, "PEratio"),
+            ParseNullableDecimal(valuation, "PBratio"),
+            ParseNullableDecimal(valuation, "DividendYield"),
+            DateTime.UtcNow,
+            "臺灣證券交易所 OpenAPI"
+        );
+    }
+
+    private async Task<IReadOnlyList<Dictionary<string, string>>> FetchOpenApiRowsAsync(
+        string resource,
+        CancellationToken cancellationToken)
+    {
+        using var response = await _httpClient.GetAsync($"{TwseOpenApiBaseUrl}/{resource}", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await JsonSerializer.DeserializeAsync<List<Dictionary<string, string>>>(stream, cancellationToken: cancellationToken)
+            ?? [];
+    }
+
+    private static string GetValue(IReadOnlyDictionary<string, string>? row, string key) =>
+        row is not null && row.TryGetValue(key, out var value) ? value.Trim() : string.Empty;
+
+    private static decimal ParseRequiredDecimal(IReadOnlyDictionary<string, string> row, string key) =>
+        TryParseDecimal(GetValue(row, key), out var value) ? value : 0;
+
+    private static long ParseRequiredLong(IReadOnlyDictionary<string, string> row, string key) =>
+        TryParseLong(GetValue(row, key), out var value) ? value : 0;
+
+    private static decimal? ParseNullableDecimal(IReadOnlyDictionary<string, string>? row, string key) =>
+        TryParseDecimal(GetValue(row, key), out var value) ? value : null;
+
+    private static decimal ParseSignedDecimal(string raw)
+    {
+        var normalized = raw.Replace("+", string.Empty, StringComparison.Ordinal).Trim();
+        return TryParseDecimal(normalized, out var value) ? value : 0;
     }
 
     private async Task<IReadOnlyList<IReadOnlyList<string>>> FetchMonthRowsAsync(string stockNo, DateTime month, CancellationToken cancellationToken)
