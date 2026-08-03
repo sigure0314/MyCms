@@ -15,6 +15,33 @@ public class StocksController : ControllerBase
         _stockDataService = stockDataService;
     }
 
+    [HttpGet("{stockNo}/dashboard")]
+    public async Task<ActionResult<TaiwanStockOpenDataSnapshot>> GetStockDashboard(
+        string stockNo,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(stockNo))
+        {
+            return BadRequest(new { message = "股票代號不可為空白。" });
+        }
+
+        try
+        {
+            return Ok(await _stockDataService.GetTaiwanStockSnapshotAsync(stockNo, cancellationToken));
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound(new { message = "查無此股票代號" });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                message = $"臺灣證券交易所公開資料暫時無法取得：{ex.Message}"
+            });
+        }
+    }
+
     [HttpGet("{stockNo}")]
     public async Task<ActionResult<TaiwanStockKLineResponse>> GetStockChart(string stockNo, CancellationToken cancellationToken)
     {
