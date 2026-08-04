@@ -1,8 +1,20 @@
-import React from 'react';
+import { HeartOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Col, Input, Row, Skeleton, Tabs, Tag, Typography } from 'antd';
+import axios from 'axios';
+import React, { useCallback, useEffect, useState } from 'react';
 import StockChart from '../components/StockChart';
+import { AiResearchCard, ChipAnalysis, EventsAndNews, MetricsGrid, StockSummaryCard } from '../components/stock/StockDashboardCards';
+import { FinancialCharts } from '../components/stock/FinancialCharts';
+import api, { type TaiwanStockKLineResponse } from '../services/api';
+import { stockDashboardService } from '../services/stockDashboardService';
+import type { DataStatus, StockDashboardViewModel } from '../types/stockDashboard';
+import { formatDateTime } from '../utils/stockFormatters';
+import './Dashboard.css';
 
-const Dashboard: React.FC = () => {
-  return <StockChart />;
-};
-
+const Dashboard:React.FC=()=>{const[input,setInput]=useState('2330');const[active,setActive]=useState('2330');const[data,setData]=useState<StockDashboardViewModel|null>(null);const[kline,setKline]=useState<TaiwanStockKLineResponse|null>(null);const[status,setStatus]=useState<DataStatus>('loading');const[error,setError]=useState<string|null>(null);const[klineError,setKlineError]=useState<string|null>(null);
+ const load=useCallback(async(stockNo:string)=>{const normalized=stockNo.trim();if(!/^\d{4,6}$/.test(normalized)){setData(null);setKline(null);setStatus('error');setError('請輸入 4 至 6 碼股票代號。');return}setStatus('loading');setError(null);setKline(null);setKlineError(null);try{const[dashboardResult,chartResult]=await Promise.allSettled([stockDashboardService.getDashboard(normalized),api.getStockChart(normalized)]);const dashboard=dashboardResult.status==='fulfilled'?dashboardResult.value:null;if(!dashboard){setData(null);setKline(null);setStatus('empty');setError('查無此股票代號');return}setData(dashboard);setActive(normalized);setStatus('success');if(chartResult.status==='fulfilled'&&chartResult.value.data.data.length)setKline(chartResult.value.data);else setKlineError('K 線資料暫時無法取得，其他研究資料仍可正常瀏覽。')}catch(err){setData(null);setKline(null);setStatus('error');setError(axios.isAxiosError(err)&&err.response?.status===404?'查無此股票代號':'資料載入失敗，請稍後再試。')}},[]);
+ useEffect(()=>{window.queueMicrotask(()=>void load('2330'))},[load]);const search=()=>void load(input);
+ const tabItems=[{key:'overview',label:'總覽',children:data&&<div className="dashboard-sections"><StockSummaryCard data={data}/><MetricsGrid metrics={data.valuationMetrics}/><Row gutter={[16,16]}><Col xs={24} xl={16}><StockChart data={kline} loading={status==='loading'} error={klineError}/></Col><Col xs={24} xl={8}><AiResearchCard data={data.aiResearch}/></Col></Row><section><SectionTitle title="基本面趨勢" subtitle="Mock data · API 串接前預覽"/><FinancialCharts charts={data.financials} status={status}/></section><section><SectionTitle title="籌碼分析" subtitle="預留 TWSE、TPEx 與 TDCC 資料來源"/><ChipAnalysis data={data}/></section><section><SectionTitle title="新聞與公司事件" subtitle="資訊彙整與重要日程"/><EventsAndNews data={data}/></section></div>},...['技術分析','基本面','籌碼分析','新聞與事件','AI 研究'].map((label,index)=>({key:`future-${index}`,label,children:<Card className="dashboard-card empty-tab"><Typography.Title level={4}>{label}</Typography.Title><Typography.Text type="secondary">此頁籤架構已預留，將於下一階段接入完整資料與互動功能。</Typography.Text></Card>}))];
+ return <main className="stock-dashboard"><div className="dashboard-heading"><div><Typography.Title level={2}>台股研究 Dashboard</Typography.Title><Typography.Text type="secondary">整合行情、基本面、籌碼與研究摘要</Typography.Text></div><Tag color={data?.summary.isMock?'orange':'green'}>{data?.summary.isMock?'公開 API 暫時不可用 · 示範資料':'行情／估值：TWSE · 其餘示範'}</Tag></div><Card className="dashboard-card search-card"><div className="search-control"><Input value={input} onChange={e=>setInput(e.target.value.replace(/\D/g,''))} onPressEnter={search} prefix={<SearchOutlined/>} placeholder="輸入股票代號，例如 2330" maxLength={6}/><Button type="primary" icon={<SearchOutlined/>} loading={status==='loading'} onClick={search}>查詢</Button></div><div className="stock-identity"><div><b>{data?.summary.name??'—'}</b><span>{active} · {data?.summary.market??'市場資料'}</span></div><small>{data?`最後更新 ${formatDateTime(data.summary.updatedAt)}`:'等待查詢'}</small></div><div className="search-actions"><Button icon={<HeartOutlined/>}>加入自選</Button><Button icon={<ReloadOutlined/>} onClick={()=>void load(active)}>重新整理</Button></div></Card>{status==='loading'&&<Card className="dashboard-card"><Skeleton active paragraph={{rows:12}}/></Card>}{status==='error'&&<Alert type="error" showIcon message={error}/>} {status==='empty'&&<Alert type="warning" showIcon message="查無此股票代號" description="請確認股票代號後重新查詢。"/>}{status==='success'&&data&&<Tabs defaultActiveKey="overview" items={tabItems}/>}</main>};
+const SectionTitle=({title,subtitle}:{title:string;subtitle:string})=><div className="section-title"><div><h2>{title}</h2><span>{subtitle}</span></div></div>;
 export default Dashboard;
