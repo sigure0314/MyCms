@@ -6,7 +6,7 @@ export default defineConfig({
   base: '/',
   plugins: [react()],
   build: {
-    outDir: process.env.VERCEL ? 'dist' : '../MyCMS.API/wwwroot',
+    outDir: 'dist',
     emptyOutDir: true,
   },
   server: {

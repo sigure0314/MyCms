@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:api": "tsc -b && vite build --outDir ../MyCMS.API/wwwroot --emptyOutDir",
     "lint": "eslint .",
     "preview": "vite preview"
   },
