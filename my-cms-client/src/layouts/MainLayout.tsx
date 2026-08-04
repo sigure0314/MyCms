@@ -246,8 +246,8 @@ const MainLayout: React.FC = () => {
             <Button onClick={() => navigate('/login')}>登入</Button>
           )}
         </Header>
-        <Content style={{ margin: '24px 16px 0' }}>
-          <div style={{ padding: 24, minHeight: 360, background: colorBgContainer, borderRadius: borderRadiusLG }}>
+        <Content style={{ margin: '20px 16px' }}>
+          <div style={{ padding: 24, minHeight: 360, background: '#f4f6f8', borderRadius: borderRadiusLG }}>
             <Outlet />
           </div>
         </Content>

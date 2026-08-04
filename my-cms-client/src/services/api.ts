@@ -214,6 +214,65 @@ export interface TaiwanStockKLineResponse {
   data: TaiwanStockKLinePoint[];
 }
 
+export interface TaiwanStockOpenDataSnapshot {
+  stockNo: string;
+  name: string;
+  market: string;
+  currentPrice: number;
+  change: number;
+  changePercent: number;
+  open: number;
+  high: number;
+  low: number;
+  previousClose: number;
+  volume: number;
+  turnover: number;
+  peRatio?: number | null;
+  pbRatio?: number | null;
+  dividendYield?: number | null;
+  updatedAt: string;
+  source: string;
+}
+
+export interface TaiwanInstitutionalTradingSnapshot {
+  stockNo: string;
+  name: string;
+  tradeDate?: string | null;
+  foreignInvestorBuy: number;
+  foreignInvestorSell: number;
+  foreignInvestorNet: number;
+  investmentTrustBuy: number;
+  investmentTrustSell: number;
+  investmentTrustNet: number;
+  dealerBuy: number;
+  dealerSell: number;
+  dealerNet: number;
+  totalNet: number;
+  source: string;
+}
+
+export interface TaiwanMarginTradingSnapshot {
+  stockNo: string;
+  name: string;
+  tradeDate?: string | null;
+  marginBuy: number;
+  marginSell: number;
+  marginCashRedemption: number;
+  marginPreviousBalance: number;
+  marginCurrentBalance: number;
+  marginChange: number;
+  shortBuy: number;
+  shortSell: number;
+  shortStockRedemption: number;
+  shortPreviousBalance: number;
+  shortCurrentBalance: number;
+  shortChange: number;
+  offsetLoanAndShort: number;
+  note: string;
+  updatedAt: string;
+  source: string;
+}
+
 
 export interface YoutubeComment {
   id: string;
@@ -462,6 +521,15 @@ const api = {
   },
   getStockChart: (stockNo: string) => {
     return axiosInstance.get<TaiwanStockKLineResponse>(`/stocks/${stockNo}`);
+  },
+  getStockDashboard: (stockNo: string) => {
+    return axiosInstance.get<TaiwanStockOpenDataSnapshot>(`/stocks/${stockNo}/dashboard`);
+  },
+  getInstitutionalTrading: (stockNo: string) => {
+    return axiosInstance.get<TaiwanInstitutionalTradingSnapshot>(`/stocks/${stockNo}/institutional-trading`);
+  },
+  getMarginTrading: (stockNo: string) => {
+    return axiosInstance.get<TaiwanMarginTradingSnapshot>(`/stocks/${stockNo}/margin-trading`);
   },
 
   fetchYoutubeComments: () => {
