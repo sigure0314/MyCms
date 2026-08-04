@@ -1,4 +1,12 @@
-# 1. 建置階段 (Build Stage) - 使用 .NET 9 SDK
+# 1. 前端建置階段
+FROM node:22-alpine AS frontend
+WORKDIR /src/my-cms-client
+COPY my-cms-client/package.json my-cms-client/package-lock.json ./
+RUN npm ci
+COPY my-cms-client/ ./
+RUN npm run build
+
+# 2. API 建置階段 (Build Stage) - 使用 .NET 9 SDK
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
@@ -11,6 +19,10 @@ RUN dotnet restore "MyCMS.API/MyCMS.API.csproj"
 # 複製其餘檔案
 COPY . .
 
+# 使用前端建置階段的輸出，避免在 Git 中提交每次都改名的 Vite bundle。
+RUN rm -rf /src/MyCMS.API/wwwroot/assets /src/MyCMS.API/wwwroot/index.html
+COPY --from=frontend /src/my-cms-client/dist/ /src/MyCMS.API/wwwroot/
+
 # 切換工作目錄到專案層
 WORKDIR "/src/MyCMS.API"
 
@@ -21,7 +33,7 @@ RUN dotnet build "MyCMS.API.csproj" -c Release -o /app/build
 FROM build AS publish
 RUN dotnet publish "MyCMS.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# 2. 執行階段 (Runtime Stage)
+# 3. 執行階段 (Runtime Stage)
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

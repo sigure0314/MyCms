@@ -42,6 +42,33 @@ public class StocksController : ControllerBase
         }
     }
 
+    [HttpGet("{stockNo}/institutional-trading")]
+    public async Task<ActionResult<TaiwanInstitutionalTradingSnapshot>> GetInstitutionalTrading(
+        string stockNo,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(stockNo))
+        {
+            return BadRequest(new { message = "股票代號不可為空白。" });
+        }
+
+        try
+        {
+            return Ok(await _stockDataService.GetInstitutionalTradingAsync(stockNo, cancellationToken));
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound(new { message = "查無此股票的三大法人資料" });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                message = $"三大法人公開資料暫時無法取得：{ex.Message}"
+            });
+        }
+    }
+
     [HttpGet("{stockNo}")]
     public async Task<ActionResult<TaiwanStockKLineResponse>> GetStockChart(string stockNo, CancellationToken cancellationToken)
     {

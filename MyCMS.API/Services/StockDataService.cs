@@ -8,6 +8,7 @@ public interface IStockDataService
 {
     Task<TaiwanStockKLineResponse> GetTaiwanStockDailyKLineAsync(string stockNo, CancellationToken cancellationToken = default);
     Task<TaiwanStockOpenDataSnapshot> GetTaiwanStockSnapshotAsync(string stockNo, CancellationToken cancellationToken = default);
+    Task<TaiwanInstitutionalTradingSnapshot> GetInstitutionalTradingAsync(string stockNo, CancellationToken cancellationToken = default);
 }
 
 public class StockDataService : IStockDataService
@@ -95,6 +96,55 @@ public class StockDataService : IStockDataService
         );
     }
 
+    public async Task<TaiwanInstitutionalTradingSnapshot> GetInstitutionalTradingAsync(
+        string stockNo,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedStockNo = stockNo.Trim();
+        var rows = await FetchOpenApiRowsAsync("fund/T86", cancellationToken);
+        var row = rows.FirstOrDefault(item => GetFirstValue(item, "Code", "證券代號") == normalizedStockNo)
+            ?? throw new InvalidOperationException($"No TWSE institutional trading data found for stockNo {normalizedStockNo}.");
+
+        var foreignBuy = ParseLong(row,
+            "ForeignInvestmentExcludingForeignDealerBuy", "外陸資買進股數(不含外資自營商)");
+        var foreignSell = ParseLong(row,
+            "ForeignInvestmentExcludingForeignDealerSell", "外陸資賣出股數(不含外資自營商)");
+        var foreignNet = ParseLong(row,
+            "ForeignInvestmentExcludingForeignDealerNetBuySell", "外陸資買賣超股數(不含外資自營商)");
+        var trustBuy = ParseLong(row, "InvestmentTrustBuy", "投信買進股數");
+        var trustSell = ParseLong(row, "InvestmentTrustSell", "投信賣出股數");
+        var trustNet = ParseLong(row, "InvestmentTrustNetBuySell", "投信買賣超股數");
+        var dealerBuy = ParseLongWithFallbackSum(
+            row,
+            new[] { "DealerBuy", "自營商買進股數" },
+            new[] { "DealerSelfBuy", "自營商自行買賣買進股數" },
+            new[] { "DealerHedgingBuy", "自營商避險買進股數" });
+        var dealerSell = ParseLongWithFallbackSum(
+            row,
+            new[] { "DealerSell", "自營商賣出股數" },
+            new[] { "DealerSelfSell", "自營商自行買賣賣出股數" },
+            new[] { "DealerHedgingSell", "自營商避險賣出股數" });
+        var dealerNet = ParseLong(row, "DealerNetBuySell", "自營商買賣超股數");
+        var totalNet = ParseLong(row, "TotalNetBuySell", "三大法人買賣超股數");
+
+        return new TaiwanInstitutionalTradingSnapshot(
+            normalizedStockNo,
+            GetFirstValue(row, "Name", "證券名稱"),
+            ParseOpenApiDate(GetFirstValue(row, "Date", "日期")),
+            foreignBuy,
+            foreignSell,
+            foreignNet,
+            trustBuy,
+            trustSell,
+            trustNet,
+            dealerBuy,
+            dealerSell,
+            dealerNet,
+            totalNet,
+            "臺灣證券交易所 OpenAPI fund/T86"
+        );
+    }
+
     private async Task<IReadOnlyList<Dictionary<string, string>>> FetchOpenApiRowsAsync(
         string resource,
         CancellationToken cancellationToken)
@@ -108,6 +158,56 @@ public class StockDataService : IStockDataService
 
     private static string GetValue(IReadOnlyDictionary<string, string>? row, string key) =>
         row is not null && row.TryGetValue(key, out var value) ? value.Trim() : string.Empty;
+
+    private static string GetFirstValue(IReadOnlyDictionary<string, string> row, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var value = GetValue(row, key);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static long ParseLong(IReadOnlyDictionary<string, string> row, params string[] keys) =>
+        TryParseLong(GetFirstValue(row, keys), out var value) ? value : 0;
+
+    private static long ParseLongWithFallbackSum(
+        IReadOnlyDictionary<string, string> row,
+        string[] totalKeys,
+        string[] firstPartKeys,
+        string[] secondPartKeys)
+    {
+        var totalRaw = GetFirstValue(row, totalKeys);
+        return TryParseLong(totalRaw, out var total)
+            ? total
+            : ParseLong(row, firstPartKeys) + ParseLong(row, secondPartKeys);
+    }
+
+    private static DateTime? ParseOpenApiDate(string raw)
+    {
+        if (raw.Length == 7 &&
+            int.TryParse(raw[..3], out var rocYear) &&
+            int.TryParse(raw.Substring(3, 2), out var rocMonth) &&
+            int.TryParse(raw.Substring(5, 2), out var rocDay))
+        {
+            return new DateTime(rocYear + 1911, rocMonth, rocDay, 0, 0, 0, DateTimeKind.Utc);
+        }
+
+        var formats = new[] { "yyyyMMdd", "yyyy-MM-dd", "yyyy/MM/dd" };
+        return DateTime.TryParseExact(
+            raw,
+            formats,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal,
+            out var date)
+            ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
+            : null;
+    }
 
     private static decimal ParseRequiredDecimal(IReadOnlyDictionary<string, string> row, string key) =>
         TryParseDecimal(GetValue(row, key), out var value) ? value : 0;

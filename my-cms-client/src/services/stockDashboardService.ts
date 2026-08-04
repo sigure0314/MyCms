@@ -1,5 +1,5 @@
 import axios from 'axios';
-import api, { type TaiwanStockOpenDataSnapshot } from './api';
+import api, { type TaiwanInstitutionalTradingSnapshot, type TaiwanStockOpenDataSnapshot } from './api';
 import { stockDashboardService as mockService } from './mockStockDashboardService';
 import type { IStockDashboardService } from './stockResearchService';
 import type { StockDashboardViewModel, ValuationMetrics } from '../types/stockDashboard';
@@ -21,8 +21,14 @@ class OpenDataStockDashboardService implements IStockDashboardService {
     }
 
     let live: TaiwanStockOpenDataSnapshot;
+    let institutional: TaiwanInstitutionalTradingSnapshot | null = null;
     try {
-      ({ data: live } = await api.getStockDashboard(stockNo));
+      const [dashboardResponse, institutionalResponse] = await Promise.all([
+        api.getStockDashboard(stockNo),
+        api.getInstitutionalTrading(stockNo).catch(() => null),
+      ]);
+      live = dashboardResponse.data;
+      institutional = institutionalResponse?.data ?? null;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         return null;
@@ -41,6 +47,19 @@ class OpenDataStockDashboardService implements IStockDashboardService {
     let metrics = replaceMetric(mock.valuationMetrics, 'pe', live.peRatio, dataDate);
     metrics = replaceMetric(metrics, 'pb', live.pbRatio, dataDate);
     metrics = replaceMetric(metrics, 'yield', live.dividendYield, dataDate);
+
+    const institutionalTrading = institutional
+      ? {
+          ...mock.institutionalTrading,
+          labels: replaceLast(mock.institutionalTrading.labels, formatInstitutionalDate(institutional.tradeDate)),
+          foreign: replaceLast(mock.institutionalTrading.foreign, sharesToLots(institutional.foreignInvestorNet)),
+          investmentTrust: replaceLast(mock.institutionalTrading.investmentTrust, sharesToLots(institutional.investmentTrustNet)),
+          dealer: replaceLast(mock.institutionalTrading.dealer, sharesToLots(institutional.dealerNet)),
+          latestDate: institutional.tradeDate ?? undefined,
+          source: `${institutional.source}（最新一日）；其餘 19 日為示範資料`,
+          isMock: false,
+        }
+      : mock.institutionalTrading;
 
     return {
       ...mock,
@@ -64,8 +83,20 @@ class OpenDataStockDashboardService implements IStockDashboardService {
         turnover: live.turnover,
       },
       valuationMetrics: metrics,
+      institutionalTrading,
     };
   }
 }
+
+const replaceLast = <T>(values: T[], latest: T): T[] => [
+  ...values.slice(0, -1),
+  latest,
+];
+
+const sharesToLots = (shares: number) => shares / 1000;
+
+const formatInstitutionalDate = (date?: string | null) => date
+  ? new Intl.DateTimeFormat('zh-TW', { month: '2-digit', day: '2-digit' }).format(new Date(date))
+  : '最新日';
 
 export const stockDashboardService = new OpenDataStockDashboardService();

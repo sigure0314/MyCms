@@ -234,6 +234,23 @@ export interface TaiwanStockOpenDataSnapshot {
   source: string;
 }
 
+export interface TaiwanInstitutionalTradingSnapshot {
+  stockNo: string;
+  name: string;
+  tradeDate?: string | null;
+  foreignInvestorBuy: number;
+  foreignInvestorSell: number;
+  foreignInvestorNet: number;
+  investmentTrustBuy: number;
+  investmentTrustSell: number;
+  investmentTrustNet: number;
+  dealerBuy: number;
+  dealerSell: number;
+  dealerNet: number;
+  totalNet: number;
+  source: string;
+}
+
 
 export interface YoutubeComment {
   id: string;
@@ -485,6 +502,9 @@ const api = {
   },
   getStockDashboard: (stockNo: string) => {
     return axiosInstance.get<TaiwanStockOpenDataSnapshot>(`/stocks/${stockNo}/dashboard`);
+  },
+  getInstitutionalTrading: (stockNo: string) => {
+    return axiosInstance.get<TaiwanInstitutionalTradingSnapshot>(`/stocks/${stockNo}/institutional-trading`);
   },
 
   fetchYoutubeComments: () => {

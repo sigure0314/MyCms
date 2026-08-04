@@ -33,3 +33,20 @@ public record TaiwanStockOpenDataSnapshot(
     DateTime UpdatedAt,
     string Source
 );
+
+public record TaiwanInstitutionalTradingSnapshot(
+    string StockNo,
+    string Name,
+    DateTime? TradeDate,
+    long ForeignInvestorBuy,
+    long ForeignInvestorSell,
+    long ForeignInvestorNet,
+    long InvestmentTrustBuy,
+    long InvestmentTrustSell,
+    long InvestmentTrustNet,
+    long DealerBuy,
+    long DealerSell,
+    long DealerNet,
+    long TotalNet,
+    string Source
+);
