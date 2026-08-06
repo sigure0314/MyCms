@@ -12,10 +12,14 @@ public class TokenService {
     public TokenService(IConfiguration config) => _config = config;
 
     public string CreateToken(User user, IEnumerable<string> permissions) {
+        return CreateToken(user.Id.ToString(), user.Username, user.Role.Name, permissions);
+    }
+
+    public string CreateToken(string subject, string username, string role, IEnumerable<string> permissions) {
         var claims = new List<Claim> {
-            new(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.UniqueName, user.Username),
-            new(ClaimTypes.Role, user.Role.Name)
+            new(JwtRegisteredClaimNames.NameId, subject),
+            new(JwtRegisteredClaimNames.UniqueName, username),
+            new(ClaimTypes.Role, role)
         };
         foreach (var permission in permissions.Distinct(StringComparer.OrdinalIgnoreCase)) {
             claims.Add(new Claim(PermissionClaimTypes.Permission, permission));
