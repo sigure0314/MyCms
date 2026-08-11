@@ -157,7 +157,7 @@ if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 using (var scope = app.Services.CreateScope()) {
     var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     if (appDb.Database.IsRelational()) {
-        appDb.Database.Migrate();
+        PropertyManagementSchemaInitializer.Initialize(appDb);
     }
 
     var kitchenDb = scope.ServiceProvider.GetRequiredService<KitchenDbContext>();
