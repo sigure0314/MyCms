@@ -155,6 +155,11 @@ app.UseSerilogRequestLogging();
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
 using (var scope = app.Services.CreateScope()) {
+    var appDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (appDb.Database.IsRelational()) {
+        appDb.Database.Migrate();
+    }
+
     var kitchenDb = scope.ServiceProvider.GetRequiredService<KitchenDbContext>();
     if (kitchenDb.Database.IsRelational()) {
         kitchenDb.Database.Migrate();
