@@ -1,16 +1,18 @@
 import { Form, Input, Button, Card, message, Space } from 'antd';
 import axios from 'axios';
 import { authService } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { LoginRequest } from '../types/auth';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnPath = (location.state as { from?: string } | null)?.from;
   const onFinish = async (values: LoginRequest) => {
     try {
       await authService.login(values);
       message.success('登入成功');
-      navigate(authService.getLandingPath());
+      navigate(returnPath ?? authService.getLandingPath(), { replace: true });
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         message.error('帳號或密碼錯誤');
@@ -23,7 +25,7 @@ const Login = () => {
     try {
       await authService.guestLogin();
       message.success('已進入試用模式');
-      navigate(authService.getLandingPath());
+      navigate(returnPath ?? authService.getLandingPath(), { replace: true });
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         message.error('試用帳號無法登入');

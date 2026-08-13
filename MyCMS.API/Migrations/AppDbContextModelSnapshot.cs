@@ -167,6 +167,69 @@ namespace MyCMS.API.Migrations
                     b.ToTable("Permissions");
                 });
 
+            modelBuilder.Entity("MyCMS.API.Models.PropertyCheckInLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AreaId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CheckInAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AreaId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PropertyCheckInLogs");
+                });
+
+            modelBuilder.Entity("MyCMS.API.Models.PropertyManagementArea", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("QrToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QrToken")
+                        .IsUnique();
+
+                    b.ToTable("PropertyManagementAreas");
+                });
+
             modelBuilder.Entity("MyCMS.API.Models.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -193,7 +256,36 @@ namespace MyCMS.API.Migrations
                         {
                             Id = 2,
                             Name = "Editor"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "機電人員"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "清潔人員"
                         });
+                });
+
+            modelBuilder.Entity("MyCMS.API.Models.PropertyCheckInLog", b =>
+                {
+                    b.HasOne("MyCMS.API.Models.PropertyManagementArea", "Area")
+                        .WithMany("CheckInLogs")
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyCMS.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Area");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MyCMS.API.Models.RolePermission", b =>
@@ -262,6 +354,11 @@ namespace MyCMS.API.Migrations
                         .HasForeignKey("ParentId");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("MyCMS.API.Models.PropertyManagementArea", b =>
+                {
+                    b.Navigation("CheckInLogs");
                 });
 
             modelBuilder.Entity("MyCMS.API.Models.RolePermission", b =>
