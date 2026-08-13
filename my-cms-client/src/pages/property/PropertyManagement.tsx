@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { PrinterOutlined } from '@ant-design/icons';
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -34,8 +34,9 @@ const PropertyManagement = () => {
   const [loading, setLoading] = useState(false);
   const [qrModal, setQrModal] = useState<PropertyArea | null>(null);
 
-  const [checkInForm] = Form.useForm();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const processedQrToken = useRef<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [createAreaForm] = Form.useForm();
 
@@ -73,11 +74,28 @@ const PropertyManagement = () => {
 
   useEffect(() => {
     const token = searchParams.get('token');
-    if (token) {
-      checkInForm.setFieldsValue({ token });
-      setActiveTab('checkin');
+    if (!token || processedQrToken.current === token) {
+      return;
     }
-  }, [checkInForm, searchParams]);
+
+    processedQrToken.current = token;
+    const checkInFromQrCode = async () => {
+      try {
+        await api.propertyCheckIn({ qrToken: token });
+        message.success('QR Code 簽到完成，已記錄時間與人員。');
+        await loadAll();
+      } catch (error) {
+        console.error('QR Code 簽到失敗:', error);
+        message.error('簽到失敗，請確認 QR Code 是否正確或帳號是否具有此區域的簽到權限。');
+      } finally {
+        navigate('/property', { replace: true });
+      }
+    };
+
+    void checkInFromQrCode();
+    // loadAll is intentionally omitted so a refreshed dashboard does not repeat a check-in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, searchParams]);
 
   const categoryStatItems = useMemo(() => {
     return categoryOptions.map(option => ({
@@ -104,27 +122,39 @@ const PropertyManagement = () => {
     }
   };
 
-  const onCheckIn = async () => {
-    try {
-      const values = await checkInForm.validateFields();
-      const token = String(values.token ?? '').trim();
-      if (!token) {
-        message.error('請輸入 QR Token。');
-        return;
-      }
-
-      await api.propertyCheckIn({ qrToken: token, note: values.note });
-      message.success('簽到完成，已記錄時間與人員。');
-      checkInForm.resetFields();
-      await loadAll();
-    } catch (error) {
-      if (error && typeof error === 'object' && 'errorFields' in error) {
-        return;
-      }
-
-      console.error('簽到失敗:', error);
-      message.error('簽到失敗，請確認 QR Token 是否正確。');
+  const printQrCode = (area: PropertyArea) => {
+    const printWindow = window.open('', '_blank', 'width=640,height=760');
+    if (!printWindow) {
+      message.warning('瀏覽器已封鎖列印視窗，請允許彈出式視窗後再試。');
+      return;
     }
+
+    const escapeHtml = (value: string) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+    printWindow.document.write(`<!doctype html>
+      <html lang="zh-Hant">
+        <head>
+          <title>${escapeHtml(area.name)}</title>
+          <style>
+            body { margin: 0; font-family: sans-serif; text-align: center; color: #111; }
+            main { padding: 40px; }
+            h1 { margin: 0 0 8px; font-size: 30px; }
+            p { margin: 0 0 28px; font-size: 20px; }
+            img { width: 320px; height: 320px; }
+          </style>
+        </head>
+        <body><main><h1>${escapeHtml(area.name)}</h1><p>${escapeHtml(area.location)}</p><img src="${escapeHtml(area.qrCodeImageUrl)}" alt="QR Code" /></main></body>
+      </html>`);
+    printWindow.document.close();
+    printWindow.addEventListener('load', () => {
+      printWindow.focus();
+      printWindow.print();
+    }, { once: true });
   };
 
   return (
@@ -203,22 +233,6 @@ const PropertyManagement = () => {
             ),
           },
           {
-            key: 'checkin',
-            label: 'QR Code 簽到',
-            children: (
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Alert type="info" message="現場人員掃描 QR Code 取得 token 後，輸入 token 即可簽到。" showIcon />
-                <Card title="簽到執行">
-                  <Form form={checkInForm} layout="vertical">
-                    <Form.Item name="token" label="QR Token" rules={[{ required: true, message: '請輸入 token' }]}><Input placeholder="掃碼後貼上 token" /></Form.Item>
-                    <Form.Item name="note" label="備註"><Input.TextArea rows={3} placeholder="例如：設備溫度正常" /></Form.Item>
-                    <Button type="primary" onClick={() => void onCheckIn()}>完成簽到</Button>
-                  </Form>
-                </Card>
-              </Space>
-            ),
-          },
-          {
             key: 'history',
             label: '歷史紀錄查詢',
             children: (
@@ -269,13 +283,19 @@ const PropertyManagement = () => {
         title={qrModal ? `${qrModal.name} QR Code` : 'QR Code'}
         open={Boolean(qrModal)}
         onCancel={() => setQrModal(null)}
-        footer={null}
+        footer={qrModal ? [
+          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={() => printQrCode(qrModal)}>
+            列印
+          </Button>,
+        ] : null}
       >
         {qrModal && (
           <Space direction="vertical" style={{ width: '100%' }}>
+            <div style={{ textAlign: 'center' }}>
+              <strong style={{ display: 'block', fontSize: 20 }}>{qrModal.name}</strong>
+              <span>{qrModal.location}</span>
+            </div>
             <img src={qrModal.qrCodeImageUrl} alt="qr-code" style={{ width: '100%', maxWidth: 280, display: 'block', margin: '0 auto' }} />
-            <Input value={qrModal.qrCodePayload} readOnly />
-            <Input value={qrModal.qrToken} readOnly />
           </Space>
         )}
       </Modal>
