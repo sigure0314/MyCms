@@ -92,9 +92,11 @@ public class AuthController : ControllerBase {
             .Include(r => r.RolePermissions)
             .ThenInclude(rp => rp.Permission)
             .FirstOrDefaultAsync(r => r.Name.ToLower() == "guest");
-        if (guestRole == null) {
-            return BadRequest("Guest role not configured");
-        }
+
+        // Guest access must not depend on a persisted member or even a seeded
+        // role. When no Guest role is configured, issue a restricted token with
+        // no permission claims instead of rejecting the login with HTTP 400.
+        guestRole ??= new Role { Id = 0, Name = "Guest" };
 
         var username = $"guest_{Guid.NewGuid():N}";
         var guestUser = new User {
