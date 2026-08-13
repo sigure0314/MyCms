@@ -97,13 +97,19 @@ public class AuthController : ControllerBase {
         }
 
         var username = $"guest_{Guid.NewGuid():N}";
+        var guestUser = new User {
+            Id = 0,
+            Username = username,
+            RoleId = guestRole.Id,
+            Role = guestRole
+        };
         var permissions = GetPermissionCodes(guestRole);
 
         var loginIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
         await _onlineUserTracker.RecordLoginAsync(username, loginIp);
 
         return Ok(new AuthResponse {
-            Token = _tokenService.CreateToken(Guid.NewGuid().ToString("N"), username, guestRole.Name, permissions),
+            Token = _tokenService.CreateToken(guestUser, permissions),
             Username = username,
             Role = guestRole.Name
         });
