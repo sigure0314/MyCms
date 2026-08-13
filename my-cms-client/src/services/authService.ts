@@ -112,7 +112,16 @@ export const authService = {
     if (res.data.token) {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem(ROLE_STORAGE_KEY, res.data.role);
-      await loadUserPermissions(res.data.role);
+      setStoredPermissionRoutes([]);
+
+      // The guest token is already valid at this point. Permission metadata is
+      // only used to choose the first page, so a failure to load it must not
+      // turn a successful guest sign-in into a login error.
+      try {
+        await loadUserPermissions(res.data.role);
+      } catch {
+        // Keep the empty permission list and let the guest enter /settings.
+      }
     }
     return res.data;
   },
