@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Spin } from 'antd';
 import { authService } from '../services/authService';
 
@@ -10,6 +10,7 @@ interface PermissionRouteProps {
 }
 
 const PermissionRoute = ({ path, element }: PermissionRouteProps) => {
+  const location = useLocation();
   const [refreshedPath, setRefreshedPath] = useState<string | null>(null);
   const permissionsReady = authService.isAdmin() || refreshedPath === path;
 
@@ -37,7 +38,7 @@ const PermissionRoute = ({ path, element }: PermissionRouteProps) => {
   }, [path]);
 
   if (!authService.isAuthenticated()) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
   }
 
   if (!permissionsReady) {
