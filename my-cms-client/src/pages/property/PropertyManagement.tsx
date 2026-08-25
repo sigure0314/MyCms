@@ -19,6 +19,7 @@ import {
   message,
 } from 'antd';
 import api, { type PropertyArea, type PropertyCategory, type PropertyCheckInHistoryItem, type PropertyCheckInResponse, type PropertyDashboardSummary } from '../../services/api';
+import { formatPropertyDateTime } from '../../utils/dateTime';
 
 const categoryOptions: Array<{ label: string; value: PropertyCategory }> = [
   { label: '機電保修', value: 1 },
@@ -207,7 +208,7 @@ const PropertyManagement = () => {
                     pagination={false}
                     dataSource={dashboard?.recentActivities ?? []}
                     columns={[
-                      { title: '時間', dataIndex: 'checkInAtUtc' },
+                      { title: '時間', dataIndex: 'checkInAtUtc', render: formatPropertyDateTime },
                       { title: '人員', dataIndex: 'username' },
                       { title: '範疇', dataIndex: 'categoryName' },
                       { title: '區域', dataIndex: 'areaName' },
@@ -238,7 +239,7 @@ const PropertyManagement = () => {
                     { title: '範疇', dataIndex: 'categoryName', render: value => <Tag color="blue">{value}</Tag> },
                     { title: '區域名稱', dataIndex: 'name' },
                     { title: '位置', dataIndex: 'location' },
-                    { title: '建立時間', dataIndex: 'createdAtUtc' },
+                    { title: '建立時間', dataIndex: 'createdAtUtc', render: formatPropertyDateTime },
                     {
                       title: 'QR Code',
                       render: (_, area) => <Button onClick={() => setQrModal(area)}>查看</Button>,
@@ -281,7 +282,7 @@ const PropertyManagement = () => {
                     onChange: (page, pageSize) => setHistoryFilter(current => ({ ...current, page, pageSize })),
                   }}
                   columns={[
-                    { title: '時間', dataIndex: 'checkInAtUtc' },
+                    { title: '時間', dataIndex: 'checkInAtUtc', render: formatPropertyDateTime },
                     { title: '人員', dataIndex: 'username' },
                     { title: '範疇', dataIndex: 'categoryName' },
                     { title: '區域', dataIndex: 'areaName' },
