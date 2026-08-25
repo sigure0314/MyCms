@@ -7,12 +7,20 @@ import type { LoginRequest } from '../types/auth';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const returnPath = (location.state as { from?: string } | null)?.from;
+  const stateReturnPath = (location.state as { from?: string } | null)?.from;
+  const queryReturnPath = new URLSearchParams(location.search).get('returnUrl');
+  const resolveReturnPath = () => {
+    const rememberedReturnPath = authService.consumeReturnPath();
+    return authService.getSafeReturnPath(stateReturnPath) ??
+      authService.getSafeReturnPath(queryReturnPath) ??
+      rememberedReturnPath ??
+      authService.getLandingPath();
+  };
   const onFinish = async (values: LoginRequest) => {
     try {
       await authService.login(values);
       message.success('登入成功');
-      navigate(returnPath ?? authService.getLandingPath(), { replace: true });
+      navigate(resolveReturnPath(), { replace: true });
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         message.error('帳號或密碼錯誤');
@@ -25,7 +33,7 @@ const Login = () => {
     try {
       await authService.guestLogin();
       message.success('已進入試用模式');
-      navigate(returnPath ?? authService.getLandingPath(), { replace: true });
+      navigate(resolveReturnPath(), { replace: true });
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         message.error('試用帳號無法登入');

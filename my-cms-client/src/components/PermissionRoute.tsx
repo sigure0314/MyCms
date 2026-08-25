@@ -38,7 +38,9 @@ const PermissionRoute = ({ path, element }: PermissionRouteProps) => {
   }, [path]);
 
   if (!authService.isAuthenticated()) {
-    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+    const returnPath = `${location.pathname}${location.search}${location.hash}`;
+    authService.rememberReturnPath(returnPath);
+    return <Navigate to={`/login?returnUrl=${encodeURIComponent(returnPath)}`} replace state={{ from: returnPath }} />;
   }
 
   if (!permissionsReady) {
