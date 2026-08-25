@@ -194,6 +194,16 @@ export interface PropertyCheckInRequest {
   note?: string;
 }
 
+export interface PropertyCheckInResponse {
+  logId: number;
+  areaId: number;
+  areaName: string;
+  category: PropertyCategory;
+  categoryName: string;
+  checkInAtUtc: string;
+  username: string;
+}
+
 export interface LiveKitTokenRequest {
   roomName: string;
   participantName?: string;
@@ -346,10 +356,14 @@ axiosInstance.interceptors.response.use(
 
         // 未登入訪客遇到 401 不應被強制導到 /login，避免阻斷匿名瀏覽
         if (err.response && err.response.status === 401 && !isAuthRequest && hasToken) {
+            const returnPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+            if (returnPath.startsWith('/') && !returnPath.startsWith('//')) {
+              sessionStorage.setItem('authReturnPath', returnPath);
+            }
             localStorage.removeItem('token');
             localStorage.removeItem('role');
             localStorage.removeItem('permissionRoutes');
-            window.location.href = '/login';
+            window.location.replace(`/login?returnUrl=${encodeURIComponent(returnPath)}`);
         }
         return Promise.reject(err);
     }
@@ -480,7 +494,7 @@ const api = {
     return axiosInstance.post<PropertyArea>('/property-management/areas', data);
   },
   propertyCheckIn: (data: PropertyCheckInRequest) => {
-    return axiosInstance.post('/property-management/checkin', data);
+    return axiosInstance.post<PropertyCheckInResponse>('/property-management/checkin', data);
   },
   getPropertyDashboard: () => {
     return axiosInstance.get<PropertyDashboardSummary>('/property-management/dashboard');

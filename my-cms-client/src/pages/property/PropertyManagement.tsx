@@ -15,9 +15,10 @@ import {
   Table,
   Tag,
   Tabs,
+  Result,
   message,
 } from 'antd';
-import api, { type PropertyArea, type PropertyCategory, type PropertyCheckInHistoryItem, type PropertyDashboardSummary } from '../../services/api';
+import api, { type PropertyArea, type PropertyCategory, type PropertyCheckInHistoryItem, type PropertyCheckInResponse, type PropertyDashboardSummary } from '../../services/api';
 
 const categoryOptions: Array<{ label: string; value: PropertyCategory }> = [
   { label: '機電保修', value: 1 },
@@ -33,6 +34,7 @@ const PropertyManagement = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [qrModal, setQrModal] = useState<PropertyArea | null>(null);
+  const [checkInResult, setCheckInResult] = useState<PropertyCheckInResponse | null>(null);
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -81,14 +83,15 @@ const PropertyManagement = () => {
     processedQrToken.current = token;
     const checkInFromQrCode = async () => {
       try {
-        await api.propertyCheckIn({ qrToken: token });
+        const response = await api.propertyCheckIn({ qrToken: token });
+        setCheckInResult(response.data);
         message.success('QR Code 簽到完成，已記錄時間與人員。');
         await loadAll();
       } catch (error) {
         console.error('QR Code 簽到失敗:', error);
         message.error('簽到失敗，請確認 QR Code 是否正確或帳號是否具有此區域的簽到權限。');
       } finally {
-        navigate('/property', { replace: true });
+        navigate('/property/checkin', { replace: true });
       }
     };
 
@@ -159,6 +162,19 @@ const PropertyManagement = () => {
 
   return (
     <>
+      {checkInResult && (
+        <Result
+          status="success"
+          title="作業紀錄成功"
+          subTitle={`${checkInResult.username} 已完成「${checkInResult.areaName}」${checkInResult.categoryName}作業紀錄。`}
+          extra={[
+            <Button key="dashboard" type="primary" onClick={() => setCheckInResult(null)}>
+              查看物業管理儀表板
+            </Button>,
+          ]}
+        />
+      )}
+      {!checkInResult && (
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
@@ -278,6 +294,7 @@ const PropertyManagement = () => {
           },
         ]}
       />
+      )}
 
       <Modal
         title={qrModal ? `${qrModal.name} QR Code` : 'QR Code'}

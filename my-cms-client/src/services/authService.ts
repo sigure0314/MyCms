@@ -3,6 +3,7 @@ import type { LoginRequest, AuthResponse } from '../types/auth';
 
 const PERMISSIONS_STORAGE_KEY = 'permissionRoutes';
 const ROLE_STORAGE_KEY = 'role';
+const RETURN_PATH_STORAGE_KEY = 'authReturnPath';
 
 const isAdminRole = (roleName: string | null | undefined) => {
   const normalizedRole = roleName?.trim().toLowerCase();
@@ -37,6 +38,15 @@ const parseJwt = (token: string) => {
     return null;
   }
 };
+
+const clearStoredAuth = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem(ROLE_STORAGE_KEY);
+  localStorage.removeItem(PERMISSIONS_STORAGE_KEY);
+};
+
+const isSafeReturnPath = (path: string | null | undefined): path is string =>
+  Boolean(path?.startsWith('/') && !path.startsWith('//'));
 
 const getRoleFromToken = () => {
   const token = localStorage.getItem('token');
@@ -126,12 +136,34 @@ export const authService = {
     return res.data;
   },
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem(ROLE_STORAGE_KEY);
-    localStorage.removeItem(PERMISSIONS_STORAGE_KEY);
+    clearStoredAuth();
     window.location.href = '/login';
   },
-  isAuthenticated: () => !!localStorage.getItem('token'),
+  isAuthenticated: () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return false;
+    }
+
+    const payload = parseJwt(token);
+    if (!payload || typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now()) {
+      clearStoredAuth();
+      return false;
+    }
+
+    return true;
+  },
+  rememberReturnPath: (path: string) => {
+    if (isSafeReturnPath(path)) {
+      sessionStorage.setItem(RETURN_PATH_STORAGE_KEY, path);
+    }
+  },
+  consumeReturnPath: () => {
+    const path = sessionStorage.getItem(RETURN_PATH_STORAGE_KEY);
+    sessionStorage.removeItem(RETURN_PATH_STORAGE_KEY);
+    return isSafeReturnPath(path) ? path : null;
+  },
+  getSafeReturnPath: (path: string | null | undefined) => isSafeReturnPath(path) ? path : null,
   isAdmin: () => isAdminRole(getStoredRole()),
   getPermissionRoutes: () => getStoredPermissionRoutes(),
   getLandingPath: () => {
