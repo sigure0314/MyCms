@@ -15,7 +15,7 @@ public class StoryService
 
     public StoryService(
         IGeminiClient gemini,
-        IImageGenerationService imageGenerationService,
+        IImageGenerator imagen,
         Supabase.Client supabase,
         AppDbContext context)
     {

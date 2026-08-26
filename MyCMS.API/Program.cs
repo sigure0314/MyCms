@@ -147,6 +147,11 @@ builder.Services.AddHttpClient<IImageGenerationService, CloudflareImageGeneratio
     client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");
     client.Timeout = TimeSpan.FromSeconds(120);
 });
+builder.Services.AddHttpClient<IImageGenerator, CloudflareImageGenerationService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");
+    client.Timeout = TimeSpan.FromSeconds(120);
+});
 builder.Services.Configure<InstagramGraphApiOptions>(builder.Configuration.GetSection("InstagramGraphApi"));
 builder.Services.AddHttpClient<InstagramGraphApiService>();
 builder.Services.AddScoped<InstagramPublishJobService>();

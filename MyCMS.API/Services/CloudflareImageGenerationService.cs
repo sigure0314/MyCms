@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace MyCMS.API.Services;
 
-public sealed class CloudflareImageGenerationService : IImageGenerationService
+public sealed class CloudflareImageGenerationService : IImageGenerationService, IImageGenerator
 {
     private const string JpegContentType = "image/jpeg";
     private readonly HttpClient _httpClient;
@@ -125,6 +125,12 @@ public sealed class CloudflareImageGenerationService : IImageGenerationService
                 "無法連線至圖片生成服務。",
                 innerException: exception);
         }
+    }
+
+    public async Task<byte[]> GenerateImageAsync(string prompt)
+    {
+        var result = await GenerateAsync(prompt);
+        return result.ImageBytes;
     }
 
     private (string Token, string AccountId, string Model) GetConfiguration()
