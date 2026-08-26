@@ -15,12 +15,12 @@ public class StoryService
 
     public StoryService(
         IGeminiClient gemini,
-        IImageGenerator imagen,
+        IImageGenerator imageGenerator,
         Supabase.Client supabase,
         AppDbContext context)
     {
         _gemini = gemini;
-        _imageGenerationService = imageGenerationService;
+        _imagen = imageGenerator;
         _supabase = supabase;
         _context = context;
     }
