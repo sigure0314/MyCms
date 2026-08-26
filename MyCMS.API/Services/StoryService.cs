@@ -13,19 +13,24 @@ public class StoryService
     private readonly Supabase.Client _supabase;   // ✅ 新增：負責存到雲端 (取代 IWebHostEnvironment)
     private readonly AppDbContext _context;       // ✅ 保留：負責存資料庫
     private readonly ILogger<StoryService> _logger;
+    private readonly string _storyBucketName;
 
     public StoryService(
         IGeminiClient gemini,
         IImageGenerator imageGenerator,
         Supabase.Client supabase,
         AppDbContext context,
-        ILogger<StoryService> logger)
+        ILogger<StoryService> logger,
+        IConfiguration configuration)
     {
         _gemini = gemini;
         _imageGenerator = imageGenerator;
         _supabase = supabase;
         _context = context;
         _logger = logger;
+        _storyBucketName = string.IsNullOrWhiteSpace(configuration["Supabase:BucketName"])
+            ? "story"
+            : configuration["Supabase:BucketName"]!.Trim();
     }
 
     // ==========================================
@@ -110,12 +115,12 @@ public class StoryService
                 string fileName = $"book_{newBook.Id}/page_{pageDto.PageIndex}_{Guid.NewGuid().ToString()[..6]}.jpg";
 
                 await _supabase.Storage
-                    .From("story-images") // 確保 Supabase Storage 有這個 Bucket
+                    .From(_storyBucketName)
                     .Upload(imgBytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
 
                 _logger.LogInformation(
-                    "Story page image completed. BookId={BookId}, PageIndex={PageIndex}, ImageBytes={ImageBytes}",
-                    newBook.Id, pageDto.PageIndex, imgBytes.Length);
+                    "Story page image completed. BookId={BookId}, PageIndex={PageIndex}, Bucket={Bucket}, ImageBytes={ImageBytes}",
+                    newBook.Id, pageDto.PageIndex, _storyBucketName, imgBytes.Length);
 
                 // --- 步驟 4: 回傳準備寫入 DB 的物件 ---
                 return new BookPage
