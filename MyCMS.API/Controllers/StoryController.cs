@@ -41,15 +41,21 @@ public class StoryController : ControllerBase
     // Step 2: 定稿並生成圖片 (慢速，需等待)
     [HttpPost("finalize")]
     [Authorize(Policy = "Permission:api.story.finalize")]
-    public async Task<IActionResult> FinalizeStory([FromBody] FinalizeStoryRequest request)
+    public async Task<IActionResult> FinalizeStory(
+        [FromBody] FinalizeStoryRequest request,
+        CancellationToken cancellationToken)
     {
         if (request.Pages == null || request.Pages.Count == 0) return BadRequest("沒有頁面內容");
 
         try
         {
             // 這裡會回傳生成的 Book 物件 (包含圖片路徑)
-            var book = await _storyService.CreateBookFromDraftAsync(request);
+            var book = await _storyService.CreateBookFromDraftAsync(request, cancellationToken);
             return Ok(book);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
