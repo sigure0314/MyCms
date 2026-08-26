@@ -9,18 +9,18 @@ namespace MyCMS.API.Services;
 public class StoryService
 {
     private readonly IGeminiClient _gemini;       // ✅ 保留：負責跟 AI 講話
-    private readonly IImageGenerator _imagen;     // ✅ 保留：負責畫圖
+    private readonly IImageGenerator _imageGenerator; // ✅ 保留：負責畫圖
     private readonly Supabase.Client _supabase;   // ✅ 新增：負責存到雲端 (取代 IWebHostEnvironment)
     private readonly AppDbContext _context;       // ✅ 保留：負責存資料庫
 
     public StoryService(
-        IGeminiClient gemini, 
-        IImageGenerator imagen, 
-        Supabase.Client supabase, 
+        IGeminiClient gemini,
+        IImageGenerator imageGenerator,
+        Supabase.Client supabase,
         AppDbContext context)
     {
         _gemini = gemini;
-        _imagen = imagen;
+        _imageGenerator = imageGenerator;
         _supabase = supabase;
         _context = context;
     }
@@ -70,7 +70,7 @@ public class StoryService
         {
             // --- 步驟 1: 生成圖片 (Generate) ---
             // 這裡會等待圖片完全生成完畢，拿到二進位檔 (byte[]) 才會往下走
-            byte[] imgBytes = await _imagen.GenerateImageAsync(pageDto.ImagePrompt);
+            byte[] imgBytes = await _imageGenerator.GenerateImageAsync(pageDto.ImagePrompt);
 
             // --- 步驟 2: 檢查圖片是否有效 (Validation) ---
             // 如果生成失敗或拿到空檔案，就拋出錯誤，阻止後續上傳
@@ -81,7 +81,7 @@ public class StoryService
 
             // --- 步驟 3: 上傳到 Supabase (Upload) ---
             // 只有上面的步驟成功，才會執行這裡
-            string fileName = $"book_{newBook.Id}/page_{pageDto.PageIndex}_{Guid.NewGuid().ToString()[..6]}.png";
+            string fileName = $"book_{newBook.Id}/page_{pageDto.PageIndex}_{Guid.NewGuid().ToString()[..6]}.jpg";
             
             await _supabase.Storage
                 .From("story-images") // 確保 Supabase Storage 有這個 Bucket
