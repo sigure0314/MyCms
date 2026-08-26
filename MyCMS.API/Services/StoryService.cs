@@ -8,10 +8,10 @@ namespace MyCMS.API.Services;
 
 public class StoryService
 {
-    private readonly IGeminiClient _gemini;
-    private readonly IImageGenerationService _imageGenerationService;
-    private readonly Supabase.Client _supabase;
-    private readonly AppDbContext _context;
+    private readonly IGeminiClient _gemini;       // ✅ 保留：負責跟 AI 講話
+    private readonly IImageGenerator _imageGenerator; // ✅ 保留：負責畫圖
+    private readonly Supabase.Client _supabase;   // ✅ 新增：負責存到雲端 (取代 IWebHostEnvironment)
+    private readonly AppDbContext _context;       // ✅ 保留：負責存資料庫
 
     public StoryService(
         IGeminiClient gemini,
@@ -20,7 +20,7 @@ public class StoryService
         AppDbContext context)
     {
         _gemini = gemini;
-        _imagen = imageGenerator;
+        _imageGenerator = imageGenerator;
         _supabase = supabase;
         _context = context;
     }
@@ -72,10 +72,7 @@ public class StoryService
         {
             // --- 步驟 1: 生成圖片 (Generate) ---
             // 這裡會等待圖片完全生成完畢，拿到二進位檔 (byte[]) 才會往下走
-            var generatedImage = await _imageGenerationService.GenerateAsync(
-                pageDto.ImagePrompt,
-                cancellationToken);
-            var imgBytes = generatedImage.ImageBytes;
+            byte[] imgBytes = await _imageGenerator.GenerateImageAsync(pageDto.ImagePrompt);
 
             // --- 步驟 2: 檢查圖片是否有效 (Validation) ---
             // 如果生成失敗或拿到空檔案，就拋出錯誤，阻止後續上傳
