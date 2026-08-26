@@ -14,13 +14,13 @@ public class StoryService
     private readonly AppDbContext _context;       // ✅ 保留：負責存資料庫
 
     public StoryService(
-        IGeminiClient gemini, 
-        IImageGenerator imagen, 
-        Supabase.Client supabase, 
+        IGeminiClient gemini,
+        IImageGenerator imageGenerator,
+        Supabase.Client supabase,
         AppDbContext context)
     {
         _gemini = gemini;
-        _imagen = imagen;
+        _imagen = imageGenerator;
         _supabase = supabase;
         _context = context;
     }
@@ -81,7 +81,7 @@ public class StoryService
 
             // --- 步驟 3: 上傳到 Supabase (Upload) ---
             // 只有上面的步驟成功，才會執行這裡
-            string fileName = $"book_{newBook.Id}/page_{pageDto.PageIndex}_{Guid.NewGuid().ToString()[..6]}.png";
+            string fileName = $"book_{newBook.Id}/page_{pageDto.PageIndex}_{Guid.NewGuid().ToString()[..6]}.jpg";
             
             await _supabase.Storage
                 .From("story-images") // 確保 Supabase Storage 有這個 Bucket
