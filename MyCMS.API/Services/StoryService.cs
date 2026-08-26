@@ -9,20 +9,23 @@ namespace MyCMS.API.Services;
 public class StoryService
 {
     private readonly IGeminiClient _gemini;       // ✅ 保留：負責跟 AI 講話
-    private readonly IImageGenerator _imagen;     // ✅ 保留：負責畫圖
+    private readonly IImageGenerator _imageGenerator; // ✅ 保留：負責畫圖
     private readonly Supabase.Client _supabase;   // ✅ 新增：負責存到雲端 (取代 IWebHostEnvironment)
     private readonly AppDbContext _context;       // ✅ 保留：負責存資料庫
+    private readonly ILogger<StoryService> _logger;
 
     public StoryService(
-        IGeminiClient gemini, 
-        IImageGenerator imagen, 
-        Supabase.Client supabase, 
-        AppDbContext context)
+        IGeminiClient gemini,
+        IImageGenerator imageGenerator,
+        Supabase.Client supabase,
+        AppDbContext context,
+        ILogger<StoryService> logger)
     {
         _gemini = gemini;
-        _imagen = imagen;
+        _imageGenerator = imageGenerator;
         _supabase = supabase;
         _context = context;
+        _logger = logger;
     }
 
     // ==========================================
@@ -65,37 +68,71 @@ public class StoryService
         _context.Books.Add(newBook);
         await _context.SaveChangesAsync(); // 執行後 newBook.Id 就有值了 (例如: 5)
 
-        // B. 處理每一頁 (使用 Task 來並行處理，加快速度)
+        // Cloudflare free-tier requests are serialized to reduce upstream 429 responses.
+        using var imageGenerationGate = new SemaphoreSlim(1, 1);
+
+        // B. 圖片生成逐張執行；完成後的 Supabase upload 仍可與下一張生成重疊。
         var pageTasks = draft.Pages.Select(async (pageDto) =>
         {
-            // --- 步驟 1: 生成圖片 (Generate) ---
-            // 這裡會等待圖片完全生成完畢，拿到二進位檔 (byte[]) 才會往下走
-            byte[] imgBytes = await _imagen.GenerateImageAsync(pageDto.ImagePrompt);
-
-            // --- 步驟 2: 檢查圖片是否有效 (Validation) ---
-            // 如果生成失敗或拿到空檔案，就拋出錯誤，阻止後續上傳
-            if (imgBytes == null || imgBytes.Length == 0)
+            var stage = "image-generation";
+            try
             {
-                throw new Exception($"第 {pageDto.PageIndex} 頁圖片生成失敗，停止上傳。");
+                if (string.IsNullOrWhiteSpace(pageDto.ImagePrompt))
+                {
+                    throw new InvalidOperationException("頁面缺少圖片生成 prompt。");
+                }
+
+                // --- 步驟 1: 生成圖片 (Generate) ---
+                // 這裡會等待圖片完全生成完畢，拿到二進位檔 (byte[]) 才會往下走
+                byte[] imgBytes;
+                await imageGenerationGate.WaitAsync();
+                try
+                {
+                    imgBytes = await _imageGenerator.GenerateImageAsync(pageDto.ImagePrompt);
+                }
+                finally
+                {
+                    imageGenerationGate.Release();
+                }
+
+                // --- 步驟 2: 檢查圖片是否有效 (Validation) ---
+                // 如果生成失敗或拿到空檔案，就拋出錯誤，阻止後續上傳
+                if (imgBytes == null || imgBytes.Length == 0)
+                {
+                    throw new InvalidOperationException("圖片服務回傳空白圖片。");
+                }
+
+                // --- 步驟 3: 上傳到 Supabase (Upload) ---
+                // 只有上面的步驟成功，才會執行這裡
+                stage = "supabase-upload";
+                string fileName = $"book_{newBook.Id}/page_{pageDto.PageIndex}_{Guid.NewGuid().ToString()[..6]}.jpg";
+
+                await _supabase.Storage
+                    .From("story-images") // 確保 Supabase Storage 有這個 Bucket
+                    .Upload(imgBytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
+
+                _logger.LogInformation(
+                    "Story page image completed. BookId={BookId}, PageIndex={PageIndex}, ImageBytes={ImageBytes}",
+                    newBook.Id, pageDto.PageIndex, imgBytes.Length);
+
+                // --- 步驟 4: 回傳準備寫入 DB 的物件 ---
+                return new BookPage
+                {
+                    BookId = newBook.Id,
+                    PageIndex = pageDto.PageIndex,
+                    Content = pageDto.Content,
+                    ImagePrompt = pageDto.ImagePrompt,
+                    ImagePath = fileName // 存入資料庫的是 Supabase 裡的路徑
+                };
             }
-
-            // --- 步驟 3: 上傳到 Supabase (Upload) ---
-            // 只有上面的步驟成功，才會執行這裡
-            string fileName = $"book_{newBook.Id}/page_{pageDto.PageIndex}_{Guid.NewGuid().ToString()[..6]}.png";
-            
-            await _supabase.Storage
-                .From("story-images") // 確保 Supabase Storage 有這個 Bucket
-                .Upload(imgBytes, fileName, new Supabase.Storage.FileOptions { Upsert = true });
-
-            // --- 步驟 4: 回傳準備寫入 DB 的物件 ---
-            return new BookPage
+            catch (Exception exception)
             {
-                BookId = newBook.Id,
-                PageIndex = pageDto.PageIndex,
-                Content = pageDto.Content,
-                ImagePrompt = pageDto.ImagePrompt,
-                ImagePath = fileName // 存入資料庫的是 Supabase 裡的路徑
-            };
+                _logger.LogError(
+                    exception,
+                    "Story page processing failed. BookId={BookId}, PageIndex={PageIndex}, Stage={Stage}",
+                    newBook.Id, pageDto.PageIndex, stage);
+                throw;
+            }
         });
 
         try 
@@ -115,10 +152,21 @@ public class StoryService
         {
             // 如果生成過程中發生錯誤 (例如某張圖生成失敗)，
             // 建議把剛剛建立的「空書殼」刪掉，避免資料庫留下一本沒有頁面的書
-            _context.Books.Remove(newBook);
-            await _context.SaveChangesAsync();
-            
-            throw new Exception($"製作繪本失敗，已復原資料。錯誤原因: {ex.Message}");
+            try
+            {
+                _context.Books.Remove(newBook);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception cleanupException)
+            {
+                _logger.LogError(
+                    cleanupException,
+                    "Failed to remove incomplete story book. BookId={BookId}",
+                    newBook.Id);
+            }
+
+            _logger.LogError(ex, "Story finalization failed. BookId={BookId}", newBook.Id);
+            throw new InvalidOperationException("製作繪本失敗，已復原未完成的書本資料。", ex);
         }
         
     }
