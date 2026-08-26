@@ -147,12 +147,13 @@ const PropertyManagement = () => {
           <style>
             body { margin: 0; font-family: sans-serif; text-align: center; color: #111; }
             main { padding: 40px; }
+            .category { margin: 0 0 16px; font-size: 36px; font-weight: 700; }
             h1 { margin: 0 0 8px; font-size: 30px; }
             p { margin: 0 0 28px; font-size: 20px; }
             img { width: 320px; height: 320px; }
           </style>
         </head>
-        <body><main><h1>${escapeHtml(area.name)}</h1><p>${escapeHtml(area.location)}</p><img src="${escapeHtml(area.qrCodeImageUrl)}" alt="QR Code" /></main></body>
+        <body><main><div class="category">${escapeHtml(area.categoryName)}</div><h1>${escapeHtml(area.name)}</h1><p>${escapeHtml(area.location)}</p><img src="${escapeHtml(area.qrCodeImageUrl)}" alt="QR Code" /></main></body>
       </html>`);
     printWindow.document.close();
     printWindow.addEventListener('load', () => {
@@ -210,7 +211,7 @@ const PropertyManagement = () => {
                     columns={[
                       { title: '時間', dataIndex: 'checkInAtUtc', render: formatPropertyDateTime },
                       { title: '人員', dataIndex: 'username' },
-                      { title: '範疇', dataIndex: 'categoryName' },
+                      { title: '分類', dataIndex: 'categoryName' },
                       { title: '區域', dataIndex: 'areaName' },
                     ]}
                   />
@@ -227,7 +228,7 @@ const PropertyManagement = () => {
                   <Form layout="inline" form={createAreaForm}>
                     <Form.Item label="區域名稱" name="name" rules={[{ required: true }]}><Input placeholder="例如：B1 發電機室" /></Form.Item>
                     <Form.Item label="位置" name="location" rules={[{ required: true }]}><Input placeholder="例如：地下一樓西側" /></Form.Item>
-                    <Form.Item label="範疇" name="category" rules={[{ required: true }]}><Select style={{ width: 150 }} options={categoryOptions} /></Form.Item>
+                    <Form.Item label="分類" name="category" rules={[{ required: true }]}><Select style={{ width: 150 }} options={categoryOptions} /></Form.Item>
                     <Form.Item><Button type="primary" onClick={() => void onCreateArea()}>新增並產生 QR</Button></Form.Item>
                   </Form>
                 </Card>
@@ -236,7 +237,7 @@ const PropertyManagement = () => {
                   loading={loading}
                   dataSource={areas}
                   columns={[
-                    { title: '範疇', dataIndex: 'categoryName', render: value => <Tag color="blue">{value}</Tag> },
+                    { title: '分類', dataIndex: 'categoryName', render: value => <Tag color="blue">{value}</Tag> },
                     { title: '區域名稱', dataIndex: 'name' },
                     { title: '位置', dataIndex: 'location' },
                     { title: '建立時間', dataIndex: 'createdAtUtc', render: formatPropertyDateTime },
@@ -258,7 +259,7 @@ const PropertyManagement = () => {
                   <Space>
                     <Select
                       allowClear
-                      placeholder="篩選範疇"
+                      placeholder="篩選分類"
                       style={{ width: 160 }}
                       options={categoryOptions}
                       onChange={(value: PropertyCategory | undefined) => setHistoryFilter(current => ({ ...current, page: 1, category: value }))}
@@ -284,7 +285,7 @@ const PropertyManagement = () => {
                   columns={[
                     { title: '時間', dataIndex: 'checkInAtUtc', render: formatPropertyDateTime },
                     { title: '人員', dataIndex: 'username' },
-                    { title: '範疇', dataIndex: 'categoryName' },
+                    { title: '分類', dataIndex: 'categoryName' },
                     { title: '區域', dataIndex: 'areaName' },
                     { title: '位置', dataIndex: 'location' },
                     { title: '備註', dataIndex: 'note' },
@@ -310,6 +311,7 @@ const PropertyManagement = () => {
         {qrModal && (
           <Space direction="vertical" style={{ width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
+              <strong style={{ display: 'block', fontSize: 28, marginBottom: 12 }}>{qrModal.categoryName}</strong>
               <strong style={{ display: 'block', fontSize: 20 }}>{qrModal.name}</strong>
               <span>{qrModal.location}</span>
             </div>
