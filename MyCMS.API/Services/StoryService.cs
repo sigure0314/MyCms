@@ -52,7 +52,9 @@ public class StoryService
     // ==========================================
     // 2. 定稿出版 (Finalize) - 畫圖 + 上傳 Supabase
     // ==========================================
-    public async Task<Book> CreateBookFromDraftAsync(FinalizeStoryRequest draft)
+    public async Task<Book> CreateBookFromDraftAsync(
+        FinalizeStoryRequest draft,
+        CancellationToken cancellationToken = default)
     {
         // A. 先建書本資料 (為了取得 BookId 來當資料夾名稱)
         var newBook = new Book
@@ -63,7 +65,7 @@ public class StoryService
         };
         
         _context.Books.Add(newBook);
-        await _context.SaveChangesAsync(); // 執行後 newBook.Id 就有值了 (例如: 5)
+        await _context.SaveChangesAsync(cancellationToken); // 執行後 newBook.Id 就有值了 (例如: 5)
 
         // B. 處理每一頁 (使用 Task 來並行處理，加快速度)
         var pageTasks = draft.Pages.Select(async (pageDto) =>
@@ -105,18 +107,24 @@ public class StoryService
 
             // C. 全部成功後，才寫入 Pages 資料表
             _context.BookPages.AddRange(bookPages);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             // 組裝回傳
             newBook.Pages = bookPages.OrderBy(p => p.PageIndex).ToList();
             return newBook;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _context.Books.Remove(newBook);
+            await _context.SaveChangesAsync(CancellationToken.None);
+            throw;
         }
         catch (Exception ex)
         {
             // 如果生成過程中發生錯誤 (例如某張圖生成失敗)，
             // 建議把剛剛建立的「空書殼」刪掉，避免資料庫留下一本沒有頁面的書
             _context.Books.Remove(newBook);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(CancellationToken.None);
             
             throw new Exception($"製作繪本失敗，已復原資料。錯誤原因: {ex.Message}");
         }
