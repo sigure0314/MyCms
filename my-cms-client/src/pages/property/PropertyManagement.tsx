@@ -19,6 +19,7 @@ import {
   message,
 } from 'antd';
 import api, { type PropertyArea, type PropertyCategory, type PropertyCheckInHistoryItem, type PropertyCheckInResponse, type PropertyDashboardSummary } from '../../services/api';
+import { formatPropertyDateTime } from '../../utils/dateTime';
 
 const categoryOptions: Array<{ label: string; value: PropertyCategory }> = [
   { label: '機電保修', value: 1 },
@@ -26,6 +27,13 @@ const categoryOptions: Array<{ label: string; value: PropertyCategory }> = [
   { label: '消防安檢', value: 3 },
   { label: '清潔區域', value: 4 },
 ];
+
+const categoryColors: Record<PropertyCategory, string> = {
+  1: 'blue',
+  2: 'purple',
+  3: 'red',
+  4: 'green',
+};
 
 const PropertyManagement = () => {
   const [areas, setAreas] = useState<PropertyArea[]>([]);
@@ -207,7 +215,7 @@ const PropertyManagement = () => {
                     pagination={false}
                     dataSource={dashboard?.recentActivities ?? []}
                     columns={[
-                      { title: '時間', dataIndex: 'checkInAtUtc' },
+                      { title: '時間', dataIndex: 'checkInAtUtc', render: formatPropertyDateTime },
                       { title: '人員', dataIndex: 'username' },
                       { title: '範疇', dataIndex: 'categoryName' },
                       { title: '區域', dataIndex: 'areaName' },
@@ -238,7 +246,7 @@ const PropertyManagement = () => {
                     { title: '範疇', dataIndex: 'categoryName', render: value => <Tag color="blue">{value}</Tag> },
                     { title: '區域名稱', dataIndex: 'name' },
                     { title: '位置', dataIndex: 'location' },
-                    { title: '建立時間', dataIndex: 'createdAtUtc' },
+                    { title: '建立時間', dataIndex: 'createdAtUtc', render: formatPropertyDateTime },
                     {
                       title: 'QR Code',
                       render: (_, area) => <Button onClick={() => setQrModal(area)}>查看</Button>,
@@ -281,7 +289,7 @@ const PropertyManagement = () => {
                     onChange: (page, pageSize) => setHistoryFilter(current => ({ ...current, page, pageSize })),
                   }}
                   columns={[
-                    { title: '時間', dataIndex: 'checkInAtUtc' },
+                    { title: '時間', dataIndex: 'checkInAtUtc', render: formatPropertyDateTime },
                     { title: '人員', dataIndex: 'username' },
                     { title: '範疇', dataIndex: 'categoryName' },
                     { title: '區域', dataIndex: 'areaName' },
@@ -309,6 +317,9 @@ const PropertyManagement = () => {
         {qrModal && (
           <Space direction="vertical" style={{ width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
+              <Tag color={categoryColors[qrModal.category]} style={{ margin: '0 0 8px' }}>
+                {qrModal.categoryName}
+              </Tag>
               <strong style={{ display: 'block', fontSize: 20 }}>{qrModal.name}</strong>
               <span>{qrModal.location}</span>
             </div>
