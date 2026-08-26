@@ -12,10 +12,12 @@ namespace MyCMS.API.Controllers;
 public class StoryController : ControllerBase
 {
     private readonly StoryService _storyService;
+    private readonly ILogger<StoryController> _logger;
 
-    public StoryController(StoryService storyService)
+    public StoryController(StoryService storyService, ILogger<StoryController> logger)
     {
         _storyService = storyService;
+        _logger = logger;
     }
 
     // Step 1: 生成文字草稿 (快速)
@@ -57,7 +59,8 @@ public class StoryController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, $"生成繪本失敗: {ex.Message}");
+            _logger.LogError(ex, "Story finalize request failed. PageCount={PageCount}", request.Pages.Count);
+            return StatusCode(500, "生成繪本失敗，請查看後端記錄以確認圖片生成或上傳錯誤。");
         }
     }
 
