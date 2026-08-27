@@ -1,5 +1,5 @@
 import axios from 'axios';
-import api, { type TaiwanInstitutionalTradingSnapshot, type TaiwanStockOpenDataSnapshot } from './api';
+import api, { type TaiwanInstitutionalTradingSnapshot, type TaiwanMarginTradingSnapshot, type TaiwanStockOpenDataSnapshot } from './api';
 import { stockDashboardService as mockService } from './mockStockDashboardService';
 import type { IStockDashboardService } from './stockResearchService';
 import type { StockDashboardViewModel, ValuationMetrics } from '../types/stockDashboard';
@@ -22,13 +22,16 @@ class OpenDataStockDashboardService implements IStockDashboardService {
 
     let live: TaiwanStockOpenDataSnapshot;
     let institutional: TaiwanInstitutionalTradingSnapshot | null = null;
+    let margin: TaiwanMarginTradingSnapshot | null = null;
     try {
-      const [dashboardResponse, institutionalResponse] = await Promise.all([
+      const [dashboardResponse, institutionalResponse, marginResponse] = await Promise.all([
         api.getStockDashboard(stockNo),
         api.getInstitutionalTrading(stockNo).catch(() => null),
+        api.getMarginTrading(stockNo).catch(() => null),
       ]);
       live = dashboardResponse.data;
       institutional = institutionalResponse?.data ?? null;
+      margin = marginResponse?.data ?? null;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         return null;
@@ -61,6 +64,19 @@ class OpenDataStockDashboardService implements IStockDashboardService {
         }
       : mock.institutionalTrading;
 
+    const marginTrading = margin
+      ? {
+          ...mock.marginTrading,
+          financingBalance: margin.marginCurrentBalance,
+          shortBalance: margin.shortCurrentBalance,
+          financingChange: margin.marginChange,
+          shortChange: margin.shortChange,
+          date: margin.tradeDate ?? margin.updatedAt,
+          source: `${margin.source}；借券賣出仍為示範資料`,
+          isMock: false,
+        }
+      : mock.marginTrading;
+
     return {
       ...mock,
       summary: {
@@ -84,6 +100,7 @@ class OpenDataStockDashboardService implements IStockDashboardService {
       },
       valuationMetrics: metrics,
       institutionalTrading,
+      marginTrading,
     };
   }
 }

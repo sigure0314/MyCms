@@ -50,3 +50,25 @@ public record TaiwanInstitutionalTradingSnapshot(
     long TotalNet,
     string Source
 );
+
+public record TaiwanMarginTradingSnapshot(
+    string StockNo,
+    string Name,
+    DateTime? TradeDate,
+    long MarginBuy,
+    long MarginSell,
+    long MarginCashRedemption,
+    long MarginPreviousBalance,
+    long MarginCurrentBalance,
+    long MarginChange,
+    long ShortBuy,
+    long ShortSell,
+    long ShortStockRedemption,
+    long ShortPreviousBalance,
+    long ShortCurrentBalance,
+    long ShortChange,
+    long OffsetLoanAndShort,
+    string Note,
+    DateTime UpdatedAt,
+    string Source
+);

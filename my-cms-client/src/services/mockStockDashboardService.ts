@@ -27,7 +27,7 @@ export class MockStockDashboardService implements IStockDashboardService {
         { key:'roe', name:'ROE', value:31.6, unit:'%', comparison:'高於同業平均 9.2%', date:'2026-06-30' }, { key:'cap', name:'市值', value:62.89, unit:'兆元', comparison:'台股市值排名第 1', date:'2026-08-02' },
       ], financials,
       institutionalTrading: { labels: Array.from({length:20},(_,i)=>`07/${14+i}`), foreign: waves(20, 1200, 420).map((v,i)=>i%4===0?-v:v), investmentTrust: waves(20, 180, 90), dealer: waves(20, 50, 120).map((v,i)=>i%3===0?-v:v), source: '近 20 日示範資料', isMock: true },
-      marginTrading: { financingBalance: 3412.8, shortBalance: 8214, securitiesLending: 23851, financingChange: -82.4, shortChange: 316, lendingChange: 524, date:'2026-08-02' },
+      marginTrading: { financingBalance: 34128, shortBalance: 8214, securitiesLending: 23851, financingChange: -824, shortChange: 316, lendingChange: 524, date:'2026-08-02', source: '示範資料', isMock: true },
       shareholdingDistribution: ['1–10 張','11–50 張','51–100 張','101–400 張','400 張以上'].map((range,i)=>({range,thisWeek:[19.6,14.2,7.8,10.5,47.9][i],lastWeek:[20.1,14.4,7.9,10.6,47.0][i]})),
       events: [ {id:'e1',title:'股東常會',date:'2026-06-04',detail:'年度股東常會',isPast:true}, {id:'e2',title:'除息日',date:'2026-06-18',detail:'現金股利 5.00 元',isPast:true}, {id:'e3',title:'法說會',date:'2026-10-15',detail:'2026 年第三季法人說明會',isPast:false}, {id:'e4',title:'財報公布',date:'2026-11-12',detail:'2026 年第三季財務報告',isPast:false}, {id:'e5',title:'股票股利',date:'2026-12-01',detail:'本期股票股利 0 元',isPast:false} ],
       news: [

@@ -9,6 +9,7 @@ public interface IStockDataService
     Task<TaiwanStockKLineResponse> GetTaiwanStockDailyKLineAsync(string stockNo, CancellationToken cancellationToken = default);
     Task<TaiwanStockOpenDataSnapshot> GetTaiwanStockSnapshotAsync(string stockNo, CancellationToken cancellationToken = default);
     Task<TaiwanInstitutionalTradingSnapshot> GetInstitutionalTradingAsync(string stockNo, CancellationToken cancellationToken = default);
+    Task<TaiwanMarginTradingSnapshot> GetMarginTradingAsync(string stockNo, CancellationToken cancellationToken = default);
 }
 
 public class StockDataService : IStockDataService
@@ -142,6 +143,43 @@ public class StockDataService : IStockDataService
             dealerNet,
             totalNet,
             "臺灣證券交易所 OpenAPI fund/T86"
+        );
+    }
+
+    public async Task<TaiwanMarginTradingSnapshot> GetMarginTradingAsync(
+        string stockNo,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedStockNo = stockNo.Trim();
+        var rows = await FetchOpenApiRowsAsync("exchangeReport/MI_MARGN", cancellationToken);
+        var row = rows.FirstOrDefault(item => GetFirstValue(item, "Code", "股票代號") == normalizedStockNo)
+            ?? throw new InvalidOperationException($"No TWSE margin trading data found for stockNo {normalizedStockNo}.");
+
+        var marginPreviousBalance = ParseLong(row, "MarginPurchaseYesterdayBalance", "融資前日餘額");
+        var marginCurrentBalance = ParseLong(row, "MarginPurchaseTodayBalance", "融資今日餘額");
+        var shortPreviousBalance = ParseLong(row, "ShortSaleYesterdayBalance", "融券前日餘額");
+        var shortCurrentBalance = ParseLong(row, "ShortSaleTodayBalance", "融券今日餘額");
+
+        return new TaiwanMarginTradingSnapshot(
+            normalizedStockNo,
+            GetFirstValue(row, "Name", "股票名稱"),
+            ParseOpenApiDate(GetFirstValue(row, "Date", "日期")),
+            ParseLong(row, "MarginPurchaseBuy", "融資買進"),
+            ParseLong(row, "MarginPurchaseSell", "融資賣出"),
+            ParseLong(row, "MarginPurchaseCashRedemption", "現金償還"),
+            marginPreviousBalance,
+            marginCurrentBalance,
+            marginCurrentBalance - marginPreviousBalance,
+            ParseLong(row, "ShortSaleBuy", "融券買進"),
+            ParseLong(row, "ShortSaleSell", "融券賣出"),
+            ParseLong(row, "ShortSaleStockRedemption", "ShortSaleCashRedemption", "現券償還"),
+            shortPreviousBalance,
+            shortCurrentBalance,
+            shortCurrentBalance - shortPreviousBalance,
+            ParseLong(row, "OffsetLoanAndShort", "資券互抵"),
+            GetFirstValue(row, "Note", "註記"),
+            DateTime.UtcNow,
+            "臺灣證券交易所 OpenAPI exchangeReport/MI_MARGN"
         );
     }
 
