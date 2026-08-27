@@ -67,26 +67,31 @@ const getRoleFromToken = () => {
 };
 
 const loadUserPermissions = async (roleName: string) => {
-  const roleRes = await api.getRoles();
-  const role = roleRes.data.find(item => item.name === roleName);
-  if (!role) {
+  try {
+    const roleRes = await api.getRoles();
+    const role = roleRes.data.find(item => item.name === roleName);
+    if (!role) {
+      setStoredPermissionRoutes([]);
+      return [];
+    }
+
+    const [rolePermissionRes, permissionRes] = await Promise.all([
+      api.getRolePermissions(role.id),
+      api.getPermissions(),
+    ]);
+
+    const permissionIds = new Set(rolePermissionRes.data);
+    const routes = permissionRes.data
+      .filter(permission => permission.isEnabled && permission.routePath && permissionIds.has(permission.id))
+      .map(permission => permission.routePath)
+      .filter((route): route is string => typeof route === 'string');
+
+    setStoredPermissionRoutes(routes);
+    return routes;
+  } catch {
     setStoredPermissionRoutes([]);
     return [];
   }
-
-  const [rolePermissionRes, permissionRes] = await Promise.all([
-    api.getRolePermissions(role.id),
-    api.getPermissions(),
-  ]);
-
-  const permissionIds = new Set(rolePermissionRes.data);
-  const routes = permissionRes.data
-    .filter(permission => permission.isEnabled && permission.routePath && permissionIds.has(permission.id))
-    .map(permission => permission.routePath)
-    .filter((route): route is string => typeof route === 'string');
-
-  setStoredPermissionRoutes(routes);
-  return routes;
 };
 
 const ensurePermissionsLoaded = async (options?: { force?: boolean }) => {
