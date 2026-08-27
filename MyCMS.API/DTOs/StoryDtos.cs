@@ -1,9 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MyCMS.API.DTOs;
 
 // 1. [前端 -> 後端] 請求生成草稿 (Step 1)
 public class GenerateScriptRequest
 {
     public string Topic { get; set; } = string.Empty;
+
+    [Range(2, 15, ErrorMessage = "童書頁數必須介於 2 到 15 頁。")]
     public int Pages { get; set; } = 4;
     public string Age { get; set; } = "5";
 }
@@ -30,5 +34,7 @@ public class FinalizeStoryRequest
 {
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
+    [MinLength(2, ErrorMessage = "童書至少需要 2 頁。")]
+    [MaxLength(15, ErrorMessage = "童書最多只能有 15 頁。")]
     public List<StoryPageDto> Pages { get; set; } = new();
 }

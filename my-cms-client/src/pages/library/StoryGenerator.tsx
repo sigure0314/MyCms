@@ -70,7 +70,7 @@ const StoryGenerator: FC = () => {
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item label="頁數" name="pages">
-            <Slider min={2} max={6} />
+            <Slider min={2} max={15} marks={{ 2: '2', 15: '15' }} />
           </Form.Item>
         </Col>
         <Col span={12}>
