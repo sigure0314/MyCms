@@ -136,7 +136,22 @@ builder.Services.AddCors(opt => opt.AddPolicy("AllowConfiguredOrigins", policy =
     .AllowCredentials()));
 
 builder.Services.AddHttpClient<IGeminiClient, GeminiClient>();
-builder.Services.AddHttpClient<IImageGenerator, GoogleImagenGenerator>();
+builder.Services.Configure<CloudflareImageGenerationOptions>(options =>
+{
+    options.ApiToken = builder.Configuration["CLOUDFLARE_AI_TOKEN"];
+    options.AccountId = builder.Configuration["CLOUDFLARE_ACCOUNT_ID"];
+    options.Model = builder.Configuration["CLOUDFLARE_AI_MODEL"];
+});
+builder.Services.AddHttpClient<IImageGenerationService, CloudflareImageGenerationService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");
+    client.Timeout = TimeSpan.FromSeconds(120);
+});
+builder.Services.AddHttpClient<IImageGenerator, CloudflareImageGenerationService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.cloudflare.com/client/v4/");
+    client.Timeout = TimeSpan.FromSeconds(120);
+});
 builder.Services.Configure<InstagramGraphApiOptions>(builder.Configuration.GetSection("InstagramGraphApi"));
 builder.Services.AddHttpClient<InstagramGraphApiService>();
 builder.Services.AddScoped<InstagramPublishJobService>();
