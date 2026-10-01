@@ -50,3 +50,30 @@ public record TaiwanInstitutionalTradingSnapshot(
     long TotalNet,
     string Source
 );
+
+public record TaiwanMarginTradingSnapshot(
+    string StockNo,
+    string Name,
+    DateTime TradeDate,
+    long FinancingPreviousBalance,
+    long FinancingBalance,
+    long FinancingChange,
+    long ShortPreviousBalance,
+    long ShortBalance,
+    long ShortChange,
+    string Source
+);
+
+public record TaiwanShareholdingDistributionItem(
+    string Range,
+    decimal Percentage,
+    long Holders,
+    long Shares
+);
+
+public record TaiwanShareholdingDistributionSnapshot(
+    string StockNo,
+    DateTime? DataDate,
+    IReadOnlyList<TaiwanShareholdingDistributionItem> Items,
+    string Source
+);

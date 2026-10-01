@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using MyCMS.API.DTOs;
 
@@ -9,12 +10,15 @@ public interface IStockDataService
     Task<TaiwanStockKLineResponse> GetTaiwanStockDailyKLineAsync(string stockNo, CancellationToken cancellationToken = default);
     Task<TaiwanStockOpenDataSnapshot> GetTaiwanStockSnapshotAsync(string stockNo, CancellationToken cancellationToken = default);
     Task<TaiwanInstitutionalTradingSnapshot> GetInstitutionalTradingAsync(string stockNo, CancellationToken cancellationToken = default);
+    Task<TaiwanMarginTradingSnapshot> GetMarginTradingAsync(string stockNo, CancellationToken cancellationToken = default);
+    Task<TaiwanShareholdingDistributionSnapshot> GetShareholdingDistributionAsync(string stockNo, CancellationToken cancellationToken = default);
 }
 
 public class StockDataService : IStockDataService
 {
     private const string TwseEndpoint = "https://www.twse.com.tw/exchangeReport/STOCK_DAY";
     private const string TwseOpenApiBaseUrl = "https://openapi.twse.com.tw/v1";
+    private const string TdccDistributionUrl = "https://opendata.tdcc.com.tw/getOD.ashx?id=1-5";
     private readonly HttpClient _httpClient;
 
     public StockDataService(HttpClient httpClient)
@@ -145,6 +149,92 @@ public class StockDataService : IStockDataService
         );
     }
 
+    public async Task<TaiwanMarginTradingSnapshot> GetMarginTradingAsync(
+        string stockNo,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedStockNo = stockNo.Trim();
+        var rows = await FetchOpenApiRowsAsync("exchangeReport/MI_MARGN", cancellationToken);
+        var row = rows.FirstOrDefault(item => GetFirstValue(item, "Code", "股票代號", "證券代號") == normalizedStockNo)
+            ?? throw new InvalidOperationException($"No TWSE margin trading data found for stockNo {normalizedStockNo}.");
+
+        var financingPrevious = ParseLong(row, "MarginPurchaseYesterdayBalance", "融資前日餘額");
+        var financingBalance = ParseLong(row, "MarginPurchaseTodayBalance", "融資今日餘額");
+        var shortPrevious = ParseLong(row, "ShortSaleYesterdayBalance", "融券前日餘額");
+        var shortBalance = ParseLong(row, "ShortSaleTodayBalance", "融券今日餘額");
+
+        return new TaiwanMarginTradingSnapshot(
+            normalizedStockNo,
+            GetFirstValue(row, "Name", "股票名稱", "證券名稱"),
+            DateTime.UtcNow.Date,
+            financingPrevious,
+            financingBalance,
+            financingBalance - financingPrevious,
+            shortPrevious,
+            shortBalance,
+            shortBalance - shortPrevious,
+            "臺灣證券交易所 OpenAPI exchangeReport/MI_MARGN");
+    }
+
+    public async Task<TaiwanShareholdingDistributionSnapshot> GetShareholdingDistributionAsync(
+        string stockNo,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedStockNo = stockNo.Trim();
+        using var response = await _httpClient.GetAsync(TdccDistributionUrl, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var csv = await response.Content.ReadAsStringAsync(cancellationToken);
+        var records = ParseCsv(csv);
+        if (records.Count < 2)
+        {
+            throw new InvalidOperationException("TDCC shareholding distribution returned no data.");
+        }
+
+        var header = records[0].Select((name, index) => (Name: name.Trim().Trim('\ufeff'), Index: index))
+            .ToDictionary(x => x.Name, x => x.Index, StringComparer.OrdinalIgnoreCase);
+        var codeIndex = FindColumn(header, "證券代號", "股票代號", "Security Code");
+        var levelIndex = FindColumn(header, "持股分級", "持股分級序號", "Holding Level");
+        var holdersIndex = FindColumn(header, "人數", "股東人數", "Number of Holders");
+        var sharesIndex = FindColumn(header, "股數", "持有股數", "Shares");
+        var percentageIndex = FindColumn(header, "占集保庫存數比例%", "占集保庫存數比例", "Percentage");
+        var dateIndex = FindColumn(header, "資料日期", "日期", "Date");
+
+        var buckets = new[]
+        {
+            new DistributionBucket("1–10 張", 1, 3),
+            new DistributionBucket("11–50 張", 4, 8),
+            new DistributionBucket("51–100 張", 9, 9),
+            new DistributionBucket("101–400 張", 10, 11),
+            new DistributionBucket("400 張以上", 12, 15)
+        };
+        DateTime? dataDate = null;
+        foreach (var record in records.Skip(1).Where(record => GetCsvValue(record, codeIndex) == normalizedStockNo))
+        {
+            if (!int.TryParse(GetCsvValue(record, levelIndex), out var level) || level is < 1 or > 15)
+            {
+                continue;
+            }
+
+            var bucket = buckets.First(item => level >= item.MinLevel && level <= item.MaxLevel);
+            bucket.Holders += ParseCsvLong(GetCsvValue(record, holdersIndex));
+            bucket.Shares += ParseCsvLong(GetCsvValue(record, sharesIndex));
+            bucket.Percentage += ParseCsvDecimal(GetCsvValue(record, percentageIndex));
+            dataDate ??= ParseDistributionDate(GetCsvValue(record, dateIndex));
+        }
+
+        if (buckets.All(bucket => bucket.Holders == 0 && bucket.Shares == 0 && bucket.Percentage == 0))
+        {
+            throw new InvalidOperationException($"No TDCC distribution found for stockNo {normalizedStockNo}.");
+        }
+
+        return new TaiwanShareholdingDistributionSnapshot(
+            normalizedStockNo,
+            dataDate,
+            buckets.Select(bucket => new TaiwanShareholdingDistributionItem(
+                bucket.Range, bucket.Percentage, bucket.Holders, bucket.Shares)).ToList(),
+            "臺灣集中保管結算所 集保戶股權分散表");
+    }
+
     private async Task<IReadOnlyList<Dictionary<string, string>>> FetchOpenApiRowsAsync(
         string resource,
         CancellationToken cancellationToken)
@@ -207,6 +297,70 @@ public class StockDataService : IStockDataService
             out var date)
             ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
             : null;
+    }
+
+    private static int FindColumn(IReadOnlyDictionary<string, int> header, params string[] candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            if (header.TryGetValue(candidate, out var index)) return index;
+        }
+        throw new InvalidOperationException($"Open data is missing column: {string.Join('/', candidates)}");
+    }
+
+    private static string GetCsvValue(IReadOnlyList<string> row, int index) =>
+        index >= 0 && index < row.Count ? row[index].Trim() : string.Empty;
+
+    private static long ParseCsvLong(string raw) =>
+        long.TryParse(raw.Replace(",", string.Empty), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : 0;
+
+    private static decimal ParseCsvDecimal(string raw) =>
+        decimal.TryParse(raw.Replace("%", string.Empty), NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ? value : 0;
+
+    private static DateTime? ParseDistributionDate(string raw)
+    {
+        var formats = new[] { "yyyyMMdd", "yyyy/MM/dd", "yyyy-MM-dd" };
+        return DateTime.TryParseExact(raw, formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)
+            ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
+            : null;
+    }
+
+    private static List<List<string>> ParseCsv(string csv)
+    {
+        var rows = new List<List<string>>();
+        var row = new List<string>();
+        var field = new StringBuilder();
+        var quoted = false;
+        for (var i = 0; i < csv.Length; i++)
+        {
+            var character = csv[i];
+            if (character == '"')
+            {
+                if (quoted && i + 1 < csv.Length && csv[i + 1] == '"') { field.Append('"'); i++; }
+                else quoted = !quoted;
+            }
+            else if (character == ',' && !quoted) { row.Add(field.ToString()); field.Clear(); }
+            else if ((character == '\r' || character == '\n') && !quoted)
+            {
+                if (character == '\r' && i + 1 < csv.Length && csv[i + 1] == '\n') i++;
+                row.Add(field.ToString()); field.Clear();
+                if (row.Any(value => !string.IsNullOrWhiteSpace(value))) rows.Add(row);
+                row = new List<string>();
+            }
+            else field.Append(character);
+        }
+        if (field.Length > 0 || row.Count > 0) { row.Add(field.ToString()); rows.Add(row); }
+        return rows;
+    }
+
+    private sealed class DistributionBucket(string range, int minLevel, int maxLevel)
+    {
+        public string Range { get; } = range;
+        public int MinLevel { get; } = minLevel;
+        public int MaxLevel { get; } = maxLevel;
+        public long Holders { get; set; }
+        public long Shares { get; set; }
+        public decimal Percentage { get; set; }
     }
 
     private static decimal ParseRequiredDecimal(IReadOnlyDictionary<string, string> row, string key) =>

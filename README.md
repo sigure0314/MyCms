@@ -77,7 +77,12 @@ npm run dev
 ### Backend API
 
 * `GET /api/stocks/{stockNo}`
+* `GET /api/stocks/{stockNo}/dashboard`
+* `GET /api/stocks/{stockNo}/institutional-trading`
+* `GET /api/stocks/{stockNo}/margin-trading`
+* `GET /api/stocks/{stockNo}/shareholding-distribution`
 * Data source: `https://www.twse.com.tw/exchangeReport/STOCK_DAY`
+* 籌碼資料來源：臺灣證券交易所 OpenAPI（三大法人、融資融券）及臺灣集中保管結算所開放資料（集保戶股權分散表）。個別來源暫時無法取得時，前端會在該卡片標示示範資料，不影響其他資料顯示。
 * Service fetches the latest 6 months of daily data and maps each item to:
 
 ```json
@@ -96,6 +101,7 @@ npm run dev
 ### Frontend Dashboard
 
 * Dashboard page includes a simple Taiwan stock K-line system.
+* **籌碼分析**頁籤提供三大法人買賣超、融資融券餘額與集保股權分散級距，並顯示各卡片的公開資料／示範資料狀態。
 * Input default stock number: `2330`.
 * Click **Load** to fetch backend API and render:
   * Candlestick chart
