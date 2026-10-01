@@ -261,6 +261,26 @@ export interface TaiwanInstitutionalTradingSnapshot {
   source: string;
 }
 
+export interface TaiwanMarginTradingSnapshot {
+  stockNo: string;
+  name: string;
+  tradeDate: string;
+  financingPreviousBalance: number;
+  financingBalance: number;
+  financingChange: number;
+  shortPreviousBalance: number;
+  shortBalance: number;
+  shortChange: number;
+  source: string;
+}
+
+export interface TaiwanShareholdingDistributionSnapshot {
+  stockNo: string;
+  dataDate?: string | null;
+  items: Array<{ range: string; percentage: number; holders: number; shares: number }>;
+  source: string;
+}
+
 
 export interface YoutubeComment {
   id: string;
@@ -519,6 +539,12 @@ const api = {
   },
   getInstitutionalTrading: (stockNo: string) => {
     return axiosInstance.get<TaiwanInstitutionalTradingSnapshot>(`/stocks/${stockNo}/institutional-trading`);
+  },
+  getMarginTrading: (stockNo: string) => {
+    return axiosInstance.get<TaiwanMarginTradingSnapshot>(`/stocks/${stockNo}/margin-trading`);
+  },
+  getShareholdingDistribution: (stockNo: string) => {
+    return axiosInstance.get<TaiwanShareholdingDistributionSnapshot>(`/stocks/${stockNo}/shareholding-distribution`);
   },
 
   fetchYoutubeComments: () => {
