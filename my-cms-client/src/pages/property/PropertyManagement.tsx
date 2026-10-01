@@ -28,6 +28,13 @@ const categoryOptions: Array<{ label: string; value: PropertyCategory }> = [
   { label: '清潔區域', value: 4 },
 ];
 
+const categoryColors: Record<PropertyCategory, string> = {
+  1: 'blue',
+  2: 'purple',
+  3: 'red',
+  4: 'green',
+};
+
 const PropertyManagement = () => {
   const [areas, setAreas] = useState<PropertyArea[]>([]);
   const [dashboard, setDashboard] = useState<PropertyDashboardSummary | null>(null);
@@ -311,7 +318,9 @@ const PropertyManagement = () => {
         {qrModal && (
           <Space direction="vertical" style={{ width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
-              <strong style={{ display: 'block', fontSize: 28, marginBottom: 12 }}>{qrModal.categoryName}</strong>
+              <Tag color={categoryColors[qrModal.category]} style={{ margin: '0 0 8px' }}>
+                {qrModal.categoryName}
+              </Tag>
               <strong style={{ display: 'block', fontSize: 20 }}>{qrModal.name}</strong>
               <span>{qrModal.location}</span>
             </div>
